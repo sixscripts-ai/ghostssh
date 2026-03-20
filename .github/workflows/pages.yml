@@ -1,0 +1,60 @@
+name: Deploy Documentation
+
+# GitHub Pages deployment for the AI job agent.  This workflow publishes a
+# simple static site containing the README and any other generated
+# documentation.  Feel free to replace the build steps with your own
+# static site generator, such as Docusaurus or Next.js, and adjust the
+# `path` argument of `upload-pages-artifact` accordingly.  The
+# repository must have GitHub Pages enabled in the repository settings.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build documentation
+        # If you have a docs build script, run it here.  For example,
+        # you could generate a Docusaurus site or a Next.js static
+        # export.  This example creates a minimal site that exposes
+        # the repository README as the landing page.
+        run: |
+          mkdir -p public
+          cp README.md public/index.md
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: public
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
