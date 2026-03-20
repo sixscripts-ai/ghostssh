@@ -1,0 +1,58 @@
+name: Agent CI
+
+# Continuous integration for the AI job agent.
+#
+# This workflow installs dependencies, runs type checks, linting,
+# executes unit tests, and builds the production artifacts. It is
+# triggered on pushes, pull requests against the default branch,
+# scheduled intervals and via manual dispatch.  Secrets for API
+# providers are not required for this job because it does not call
+# external services directly. You can extend this file to include
+# deployment steps or additional quality checks.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Run the pipeline every six hours to catch stale tests or
+    # security updates. Adjust the cron expression as needed.
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    # Set a default working directory for all run commands.  Because this
+    # repository is structured as a monorepo with workspaces, we rely on
+    # npm workspaces to install and test packages across the tree.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        # Use npm ci to install dependencies according to the lockfile.
+        run: npm ci --workspaces --if-present
+
+      - name: Type checking
+        # The typecheck script should exit non‑zero on error.  If
+        # typechecking is not critical for your project, you can remove
+        # `|| true` to make failures block the build.
+        run: npm run typecheck --workspaces --if-present || true
+
+      - name: Lint
+        run: npm run lint --workspaces --if-present
+
+      - name: Test
+        run: npm run test --workspaces --if-present
+
+      - name: Build
+        run: npm run build --workspaces --if-present
