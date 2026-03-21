@@ -1,3 +1,4 @@
+import { GitHubService } from "./github.service.js";
 import { z } from "zod";
 import type { JobPosting, RankedJob } from "../types/job.js";
 import type { CandidateProfile } from "../types/profile.js";
@@ -68,6 +69,23 @@ export class RankingService {
       
       const rest = merged.slice(20);
       const finalRanked = [...boosted, ...rest].sort((a, b) => b.score - a.score);
+
+      const github = new GitHubService();
+      if (profile.githubUsername) {
+        for (let i = 0; i < Math.min(10, finalRanked.length); i++) {
+          const job = finalRanked[i];
+          const connections = await github.getNetworkOverlap(
+            profile.githubUsername, job.company
+          ).catch(() => []);
+          job.networkConnections = connections;
+          if (connections.length > 0) {
+            job.score = Math.min(job.score + 15, 100);
+            job.tags = [...job.tags, `network_overlap_${connections.length}`];
+          }
+        }
+        // re-sort after score adjustments
+        finalRanked.sort((a, b) => b.score - a.score);
+      }
 
       console.log(`[Ranking] Merged ${finalRanked.length} ranked jobs. Top: ${finalRanked[0]?.title ?? 'none'} (${finalRanked[0]?.score ?? 0})`);
       await emitAgentEvent({ userId: "system", agent: "ranker", action: "rank_jobs", status: "success", duration_ms: Date.now() - start, result_count: finalRanked.length });
