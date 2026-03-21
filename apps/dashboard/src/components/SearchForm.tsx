@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { SearchRequest, ProviderName } from "@/types/api";
-import { ProfileUploader } from "./ProfileUploader";
+import { UrlScraper } from "./UrlScraper";
 
 const PROVIDERS: { value: ProviderName; label: string }[] = [
   { value: "minimax", label: "Minimax M2.5" },
@@ -127,17 +127,17 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
         </div>
 
         <div className="form-group full-width">
-          <ProfileUploader onUploadComplete={(text) => setLinkedinText(text)} />
+          <UrlScraper onScrapeComplete={(text) => setLinkedinText(text)} />
           <label className="form-label" htmlFor="linkedin">
-            Or Paste LinkedIn Profile Text Manually
+            Or Paste Profile Summary Text Manually
           </label>
           <textarea
             id="linkedin"
             className="form-textarea"
-            placeholder="Paste your LinkedIn profile summary here..."
+            placeholder="Parsed Markdown from Jina URLs will appear here so you can review and edit it before hunting jobs..."
             value={linkedinText}
             onChange={(e) => setLinkedinText(e.target.value)}
-            rows={6}
+            rows={8}
           />
         </div>
 
