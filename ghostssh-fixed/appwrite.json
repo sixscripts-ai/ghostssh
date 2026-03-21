@@ -1,0 +1,40 @@
+{
+    "projectId": "sfo-69be176f00077d92699d",
+    "projectName": "ghostssh",
+    "functions": [
+        {
+            "$id": "cron-scanner",
+            "name": "Job Scanner Cron",
+            "runtime": "node-18.0",
+            "execute": [],
+            "events": [],
+            "schedule": "0 */6 * * *",
+            "timeout": 300,
+            "enabled": true,
+            "logging": true,
+            "entrypoint": "src/main.ts",
+            "commands": "npm install && npm run build",
+            "ignore": ["node_modules", ".npm"],
+            "path": "functions/cron-scanner",
+            "vars": {
+                "API_URL": "",
+                "CRON_SECRET": "",
+                "APPWRITE_ENDPOINT": "https://sfo.cloud.appwrite.io/v1",
+                "APPWRITE_PROJECT_ID": "sfo-69be176f00077d92699d",
+                "APPWRITE_API_KEY": ""
+            }
+        }
+    ],
+    "sites": [
+        {
+            "$id": "ghostssh-dashboard",
+            "name": "ghostssh",
+            "framework": "nextjs",
+            "buildRuntime": "node-22",
+            "buildCommand": "npm run build",
+            "outputDirectory": ".next",
+            "installCommand": "npm install",
+            "path": "apps/dashboard"
+        }
+    ]
+}

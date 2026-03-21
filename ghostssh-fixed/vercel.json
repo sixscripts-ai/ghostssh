@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "buildCommand": "cd apps/api && npm install && npm run build",
+  "outputDirectory": "apps/api/dist",
+  "installCommand": "npm install",
+  "framework": null,
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index.js" }],
+  "env": {
+    "NODE_ENV": "production",
+    "DEFAULT_PROVIDER": "minimax",
+    "FALLBACK_PROVIDER": "anthropic",
+    "MINIMAX_MODEL": "MiniMax-M2.7"
+  }
+}
