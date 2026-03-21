@@ -1,11 +1,12 @@
 import { ID } from 'node-appwrite';
 import { databases, DATABASE_ID } from './appwrite.js';
+import { env } from '../config/env.js';
 
 const COLLECTION_ID = 'agent_events';
 
 export interface AgentEvent {
   userId: string;
-  agent: "scout" | "ranker" | "memory" | "outreach" | "applier" | "cron";
+  agent: "scout" | "ranker" | "memory" | "outreach" | "applier" | "cron" | "system";
   action: string;
   status: "success" | "error" | "timeout" | "skipped";
   duration_ms: number;
@@ -17,7 +18,7 @@ export interface AgentEvent {
 
 export async function emitAgentEvent(event: AgentEvent): Promise<void> {
   try {
-    if (process.env.NODE_ENV === 'development') {
+    if (env.NODE_ENV !== 'production') {
       console.log('[Agent Event]', JSON.stringify(event));
     }
 
@@ -36,7 +37,7 @@ export async function emitAgentEvent(event: AgentEvent): Promise<void> {
     // Fire and forget
     await databases.createDocument(DATABASE_ID, COLLECTION_ID, ID.unique(), doc);
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
+    if (env.NODE_ENV !== 'production') {
       console.error('[Agent Event] Failed to emit:', error);
     }
     // Never throws

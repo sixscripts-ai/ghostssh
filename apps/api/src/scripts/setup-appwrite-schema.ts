@@ -109,6 +109,7 @@ async function setup() {
         await createAttr(() => databases.createStringAttribute('ghostssh', 'agent_events', 'timestamp', 32, true), 'agent_events.timestamp');
         await createIdx(() => databases.createIndex('ghostssh', 'agent_events', 'byUser', IndexType.Key, ['userId'], [OrderBy.Asc]), 'agent_events.byUser');
         await createIdx(() => databases.createIndex('ghostssh', 'agent_events', 'byAgent', IndexType.Key, ['agent'], [OrderBy.Asc]), 'agent_events.byAgent');
+        await createIdx(() => databases.createIndex('ghostssh', 'agent_events', 'byTimestamp', IndexType.Key, ['timestamp'], [OrderBy.Asc]), 'agent_events.byTimestamp');
 
         // Usage
         await createAttr(() => databases.createStringAttribute('ghostssh', 'usage', 'userId', 64, true), 'usage.userId');
