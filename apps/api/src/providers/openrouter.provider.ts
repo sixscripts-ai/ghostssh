@@ -4,7 +4,7 @@ import { env } from "../config/env.js";
 
 export class OpenRouterProvider extends BaseProvider {
   readonly name = "openrouter" as const;
-  async generate(params: LlmGenerateParams): Promise<string> {
+  async _generate(params: LlmGenerateParams): Promise<string> {
     if (!env.OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY missing");
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${env.OPENROUTER_API_KEY}`},

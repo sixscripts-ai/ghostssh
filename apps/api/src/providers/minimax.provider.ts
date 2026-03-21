@@ -5,7 +5,7 @@ import { env } from "../config/env.js";
 export class MinimaxProvider extends BaseProvider {
   readonly name = "minimax" as const;
 
-  async generate(params: LlmGenerateParams): Promise<string> {
+  async _generate(params: LlmGenerateParams): Promise<string> {
     if (!env.MINIMAX_API_KEY) throw new Error("MINIMAX_API_KEY missing");
 
     const res = await fetch("https://api.minimaxi.chat/v1/text/chatcompletion_v2", {
