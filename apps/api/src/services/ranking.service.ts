@@ -43,10 +43,17 @@ export class RankingService {
       const batches = chunk(filtered, BATCH_SIZE);
       console.log(`[Ranking] Running ${batches.length} batch(es) in parallel...`);
 
-      // Rank each batch in parallel
-      const batchResults = await Promise.all(
-        batches.map((batch, i) => this.rankBatch(profile, batch, provider, i + 1, batches.length))
-      );
+      // Rank each batch max 3 concurrently
+      const batchResults: import("../types/job.js").RankedJob[][] = [];
+      for (let i = 0; i < batches.length; i += 3) {
+        const chunkBatches = batches.slice(i, i + 3);
+        const results = await Promise.allSettled(chunkBatches.map((b, idx) => 
+          this.rankBatch(profile, b, provider, i + idx + 1, batches.length)
+        ));
+        for (const res of results) {
+          if (res.status === 'fulfilled') batchResults.push(res.value);
+        }
+      }
 
       // Merge all results and re-sort by score
             const merged = batchResults.flat().sort((a, b) => b.score - a.score);
