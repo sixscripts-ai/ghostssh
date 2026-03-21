@@ -34,8 +34,8 @@ export const memoryRoutes: FastifyPluginAsync = async (app) => {
     return { userId, total: memories.length, memories };
   });
 
-  /** DELETE /memory/:memoryId — remove a specific memory */
-  app.delete<{ Params: DeleteParams }>('/memory/:memoryId', async (req, rep) => {
+  /** DELETE /memory/item/:memoryId — remove a specific memory */
+  app.delete<{ Params: DeleteParams }>('/memory/item/:memoryId', async (req, rep) => {
     const { memoryId } = req.params;
 
     if (!memoryId) {
