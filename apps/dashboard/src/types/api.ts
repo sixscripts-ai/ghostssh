@@ -69,9 +69,22 @@ export type SearchRequest = {
   topK?: number;
 };
 
+export type OpinionPick = {
+  type: "apply_today" | "watch_this" | "cold_outreach";
+  company: string;
+  role: string;
+  score: number;
+  rationale: string;
+  url?: string;
+  recruiterNote?: string;
+  bestTimeToApply?: string;
+  confidenceScore?: number;
+};
+
 export type SearchResponse = {
   profile: CandidateProfile;
   jobs: RankedJob[];
   kits: ApplicationKit[];
   providerUsed?: ProviderName;
+  opinions?: OpinionPick[];
 };

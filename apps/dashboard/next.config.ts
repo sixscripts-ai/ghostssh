@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
+const nextConfig: any = {
   // Pass API_URL to server-side API routes
   serverRuntimeConfig: {
     API_URL: process.env.API_URL || "http://localhost:8080",

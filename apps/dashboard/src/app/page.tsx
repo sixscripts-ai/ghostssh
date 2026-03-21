@@ -6,6 +6,7 @@ import SearchForm from "@/components/SearchForm";
 import JobCard from "@/components/JobCard";
 import JobDetail from "@/components/JobDetail";
 import ProfileSummary from "@/components/ProfileSummary";
+import OpinionCards from "@/components/OpinionCards";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
 
@@ -72,6 +73,14 @@ export default function HomePage() {
       {result && !isLoading && (
         <>
           <ProfileSummary profile={result.profile} />
+          
+          {result.opinions && result.opinions.length > 0 && (
+            <OpinionCards
+              opinions={result.opinions}
+              githubUsername={lastRequest?.githubUsername}
+              linkedinText={lastRequest?.linkedinText}
+            />
+          )}
 
           <div className="results-section">
             <div className="results-header">
