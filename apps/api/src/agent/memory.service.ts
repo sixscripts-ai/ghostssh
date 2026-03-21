@@ -226,6 +226,50 @@ export class AgentMemoryService {
     await this.addMemory(githubUsername, content, 'application');
   }
 
+  /**
+   * PHASE 3.2 — Active Preference Synthesis
+   * Reads all raw memories, asks LLM to identify 5 strongest preferences,
+   * and writes the summary back to Mem0.
+   */
+  public async synthesizePreferences(userId: string): Promise<string | null> {
+    if (!this.mem0) return null;
+
+    console.log(`[MemoryService] 🧠 Synthesizing preferences for ${userId}...`);
+    const memories = await this.getAll(userId);
+    if (memories.length < 5) {
+      console.log('[MemoryService] Not enough memories to synthesize (<5).');
+      return null;
+    }
+
+    const rawFacts = memories.map(m => `- ${m.memory}`).join('\n');
+
+    const prompt = `Based on these user memories, identify the 5 strongest, most consistent job preferences.
+Format as a clear bulleted list.
+
+USER MEMORIES:
+${rawFacts}
+
+PREFERENCES:`;
+
+    // Use withFallback to call LLM for synthesis
+    const { withFallback } = await import('../providers/index.js');
+    try {
+      const summary = await withFallback(llm => llm.generate({
+        system: 'You are a career strategist. Extract clear, actionable preferences from raw behavior logs.',
+        user: prompt,
+        maxOutputTokens: 500
+      }));
+
+      console.log(`[MemoryService] 🧠 Synthesis complete for ${userId}. Storing...`);
+      await this.addMemory(userId, `SUMMARY OF PREFERENCES:\n${summary}`, 'preference');
+      
+      return summary;
+    } catch (err: any) {
+      console.error('[MemoryService] Synthesis failed:', err.message);
+      return null;
+    }
+  }
+
   /** Returns true if Mem0 is connected and ready */
   public get ready(): boolean {
     return this.isReady;

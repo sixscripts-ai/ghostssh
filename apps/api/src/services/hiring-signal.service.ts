@@ -20,30 +20,36 @@ export interface HiringSignalResult {
   searchedAt: string;
 }
 
-const SIGNAL_PATTERNS: Array<{ regex: RegExp; label: string; weight: number }> = [
-  { regex: /hiring|we('re| are) hiring|join (our|the) team/i, label: 'Active hiring language', weight: 0.3 },
-  { regex: /open (role|position)|apply now|job (opening|listing)/i, label: 'Open position mention', weight: 0.25 },
-  { regex: /headcount|growing|expand(ing|ed)|scaling/i, label: 'Growth signal', weight: 0.2 },
-  { regex: /202[5-6]/i, label: 'Recent date reference', weight: 0.15 },
-  { regex: /remote|hybrid|on-?site/i, label: 'Work arrangement mentioned', weight: 0.1 },
+/**
+ * PHASE 1.3 — Hiring Intent Scoring
+ * - Job posted < 7 days ago → +40
+ * - Company headcount growing → +20
+ * - Multiple open roles for same team → +15
+ * - Referral network overlap (GitHub mutuals) → +25 (Placeholder for now)
+ */
+const SCORING_RULES = [
+  { regex: /posted (less than |under |< )?7 days ago|just posted|recently posted/i, label: 'Recent Posting (<7d)', weight: 40 },
+  { regex: /headcount growing|scaling up|rapidly expanding|hiring spree/i, label: 'Growth Signal', weight: 20 },
+  { regex: /multiple (openings|positions)|hiring for (several|multiple) roles/i, label: 'High Team Intent', weight: 15 },
+  { regex: /hiring|we are hiring|join our team/i, label: 'General Hiring', weight: 10 },
 ];
 
 export class HiringSignalService {
   /**
    * Detect hiring intent for a company + role combination.
-   * Returns a 0-100 score based on web evidence.
+   * Uses Phase 1.3 weighting: Recent (<7d) +40, Growth +20, etc.
    */
   async detectSignals(company: string, role: string): Promise<HiringSignalResult> {
-    console.log(`[HiringSignal] Detecting signals for ${company} × ${role}...`);
+    console.log(`[HiringSignal] Detecting intent for ${company} × ${role}...`);
 
     const queries = [
-      `"${company}" hiring "${role}" 2026`,
-      `"${company}" jobs ${role} open positions`,
-      `"${company}" team growing engineers`,
+      `"${company}" hiring "${role}" posted last 7 days`,
+      `"${company}" headcount growth 2026`,
+      `"${company}" multiple openings for ${role}`,
     ];
 
     const allSignals: HiringSignal[] = [];
-    const seenTexts = new Set<string>();
+    const seenLabels = new Set<string>();
 
     for (const query of queries) {
       const results = await webSearchService.search(query, 3);
@@ -51,32 +57,32 @@ export class HiringSignalService {
       for (const result of results) {
         const combinedText = `${result.title} ${result.snippet}`;
 
-        for (const pattern of SIGNAL_PATTERNS) {
-          if (pattern.regex.test(combinedText)) {
-            const key = `${pattern.label}:${result.url}`;
-            if (!seenTexts.has(key)) {
-              seenTexts.add(key);
-              allSignals.push({
-                source: result.url,
-                text: `${pattern.label}: "${result.title.slice(0, 80)}"`,
-                weight: pattern.weight,
-              });
-            }
+        for (const rule of SCORING_RULES) {
+          if (rule.regex.test(combinedText) && !seenLabels.has(rule.label)) {
+            seenLabels.add(rule.label);
+            allSignals.push({
+              source: result.url,
+              text: `${rule.label}: "${result.title.slice(0, 80)}"`,
+              weight: rule.weight,
+            });
           }
         }
       }
     }
 
     // Calculate composite score (0-100)
-    const rawScore = allSignals.reduce((sum, s) => sum + s.weight, 0);
-    const normalizedScore = Math.min(100, Math.round(rawScore * 50)); // Scale so 2+ strong signals → 80+
+    const urgencyScore = allSignals.reduce((sum, s) => sum + s.weight, 0);
+    // Placeholder for GitHub referral network (+25)
+    const referralBonus = 0; 
+    
+    const finalScore = Math.min(100, urgencyScore + referralBonus);
 
-    console.log(`[HiringSignal] ${company} × ${role}: score ${normalizedScore}/100, ${allSignals.length} signals`);
+    console.log(`[HiringSignal] ${company} × ${role}: Urgency Score ${finalScore}/100 [${allSignals.length} signals]`);
 
     return {
       company,
       role,
-      score: normalizedScore,
+      score: finalScore,
       signals: allSignals,
       searchedAt: new Date().toISOString(),
     };

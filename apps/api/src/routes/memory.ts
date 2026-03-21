@@ -71,8 +71,27 @@ export const memoryRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      const results = await agentMemoryService.searchMemory(userId, query, limit);
+    const results = await agentMemoryService.searchMemory(userId, query, limit);
       return { userId, query, total: results.length, results };
     }
   );
+
+  /** POST /memory/:userId/synthesize — trigger active preference synthesis */
+  app.post<{ Params: MemoryParams }>('/memory/:userId/synthesize', async (req, rep) => {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return rep.status(400).send({ error: 'BAD_REQUEST', message: 'userId is required' });
+    }
+
+    if (!agentMemoryService.ready) {
+      return rep.status(503).send({
+        error: 'SERVICE_UNAVAILABLE',
+        message: 'Mem0 is not configured.',
+      });
+    }
+
+    const summary = await agentMemoryService.synthesizePreferences(userId);
+    return { success: !!summary, userId, summary };
+  });
 };

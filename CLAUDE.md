@@ -15,7 +15,7 @@ Key skills to always use:
 - `systematic-debugging` — when fixing bugs
 
 ## Provider
-Default provider is **Minimax M2.5**. Set MINIMAX_API_KEY in apps/api/.env.
+Default provider is **Minimax M2.7**. Set MINIMAX_API_KEY in apps/api/.env.
 
 ## Dev
 ```bash

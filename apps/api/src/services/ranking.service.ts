@@ -6,6 +6,8 @@ import { withFallback } from "../providers/index.js";
 import { jobRankPrompt } from "../prompts/job-rank.js";
 import { safeParseJson } from "../lib/safe-parse-json.js";
 
+import { agentMemoryService } from "../agent/memory.service.js";
+
 const BATCH_SIZE = 25;
 
 const Schema = z.object({
@@ -20,9 +22,8 @@ const Schema = z.object({
 
 export class RankingService {
   /**
-   * Rank jobs against a candidate profile.
+   * Rank jobs against a candidate profile + mem0 memories.
    * Batches jobs in groups of 25 to avoid token bombs.
-   * Runs batches in parallel, merges results, re-sorts by score.
    */
   async rank(profile: CandidateProfile, jobs: JobPosting[], provider?: ProviderName): Promise<RankedJob[]> {
     const filtered = jobs.filter(j =>
@@ -32,30 +33,45 @@ export class RankingService {
 
     if (filtered.length === 0) return [];
 
-    console.log(`[Ranking] ${filtered.length} jobs after filter → batching into groups of ${BATCH_SIZE}`);
-
-    // Batch into groups of 25
-    const batches = chunk(filtered, BATCH_SIZE);
-    console.log(`[Ranking] Running ${batches.length} batch(es) in parallel...`);
-
-    // Rank each batch in parallel
-    const batchResults = await Promise.all(
-      batches.map((batch, i) => this.rankBatch(profile, batch, provider, i + 1, batches.length))
+    // PHASE 2.2 — Fetch memory-augmented context
+    const userId = profile.githubUsername || "unknown";
+    console.log(`[Ranking] Fetching mem0 context for ${userId}...`);
+    const memContext = await agentMemoryService.getHistoricalContext(
+      userId,
+      `target titles: ${profile.targetTitles.join(", ")}`
     );
 
-    // Merge all results and re-sort by score
+    console.log(`[Ranking] ${filtered.length} jobs → batching into groups of ${BATCH_SIZE}`);
+    const batches = chunk(filtered, BATCH_SIZE);
+
+    const batchResults = await Promise.all(
+      batches.map((batch, i) => this.rankBatch(profile, batch, memContext.semanticPreferences, provider, i + 1, batches.length))
+    );
+
     const merged = batchResults.flat().sort((a, b) => b.score - a.score);
-    console.log(`[Ranking] Merged ${merged.length} ranked jobs. Top: ${merged[0]?.title ?? 'none'} (${merged[0]?.score ?? 0})`);
+    
+    // PHASE 3.1 — Record summary to memory
+    const topMatch = merged[0];
+    if (topMatch && profile.githubUsername) {
+      await agentMemoryService.recordRankingResult(
+        profile.githubUsername,
+        topMatch.title,
+        topMatch.company,
+        topMatch.score,
+        merged.length
+      );
+    }
 
     return merged;
   }
 
   /**
-   * Rank a single batch of jobs (max 25).
+   * Rank a single batch of jobs (max 25) with injected memories.
    */
   private async rankBatch(
     profile: CandidateProfile,
     batch: JobPosting[],
+    memories: string,
     provider: ProviderName | undefined,
     batchNum: number,
     totalBatches: number
@@ -68,7 +84,10 @@ export class RankingService {
         json: true,
         maxOutputTokens: 4000,
         user: JSON.stringify({
-          profile,
+          profile: {
+            ...profile,
+            learnedPreferences: memories // PHASE 2.2 — Inject memories
+          },
           jobs: batch.map(j => ({
             id: j.id,
             company: j.company,

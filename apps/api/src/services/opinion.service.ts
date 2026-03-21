@@ -26,15 +26,19 @@ export class OpinionService {
     // Only send the top 20 jobs to save tokens, as picks should come from the best matches
     const topJobs = rankedJobs.slice(0, 20);
 
-    const system = `You are an expert career strategist reviewing automated job matches.
-Your job is to look at a list of ranked jobs and provide exactly 3 strategic picks:
+    const system = `You are an expert career strategist reviewing automated job matches and growth company scans.
+Your job is to look at a list of ranked jobs and identified growth companies to provide exactly 3 strategic picks:
 
-1. "apply_today": The absolute best fit to apply to immediately. Must have a high score and be an active role.
+1. "apply_today": The absolute best fit from the job list to apply to immediately. Must have a high score.
 2. "watch_this": A strong company growing fast, but maybe the specific role isn't a 100% perfect fit. Suggest waiting or watching.
-3. "cold_outreach": A great fit company where the user should reach out directly even if the role isn't perfectly aligned, or to get ahead of the curve.
+3. "cold_outreach": A great fit from the job list OR the growth company list where the user should reach out directly even if no direct role is listed.
 
 Return JSON matching: { "opinions": [{ "type": "apply_today|watch_this|cold_outreach", "company": "...", "role": "...", "score": 95, "rationale": "2 sentences explaining why.", "url": "..." }] }
 Do not return more than 3 picks. Make sure the type matches exactly.`;
+
+    // PHASE 4.1 — Supplemet with Growth Companies for Cold Outreach
+    const { outreachService } = await import("./outreach.service.js");
+    const growthCompanies = await outreachService.discoverGrowthCompanies(profile);
 
     const user = JSON.stringify({
       profile: {
@@ -49,6 +53,12 @@ Do not return more than 3 picks. Make sure the type matches exactly.`;
         score: j.score,
         rationale: j.rationale,
         url: j.url
+      })),
+      growthCompanies: growthCompanies.map(c => ({
+        name: c.name,
+        reason: c.reason,
+        score: c.score,
+        url: c.url
       }))
     }, null, 2);
 

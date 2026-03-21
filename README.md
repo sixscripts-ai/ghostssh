@@ -25,7 +25,7 @@ POST to `http://localhost:8080/jobs/search`:
 
 | Provider   | Env Key              | Default Model       |
 |------------|----------------------|---------------------|
-| Minimax    | MINIMAX_API_KEY      | MiniMax-M2.5        |
+| Minimax    | MINIMAX_API_KEY      | MiniMax-M2.7        |
 | OpenAI     | OPENAI_API_KEY       | gpt-4o              |
 | Anthropic  | ANTHROPIC_API_KEY    | claude-sonnet-4-5   |
 | Gemini     | GEMINI_API_KEY       | gemini-2.5-pro      |
