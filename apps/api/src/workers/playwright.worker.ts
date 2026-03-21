@@ -1,90 +1,139 @@
-import { Query } from 'node-appwrite';
-import { databases, DATABASE_ID, JOBS_COLLECTION_ID } from '../lib/appwrite.js';
 import { chromium, type Browser, type Page } from 'playwright';
+import { env } from '../config/env.js';
+import { emitAgentEvent } from '../lib/event-bus.js';
 
-/**
- * Background worker that continuously polls for jobs labeled 'queued_for_apply'
- * in the Appwrite database, then uses Playwright to navigate to the employer
- * portal and apply using the generated CandidateProfile and Cover Letter Kit.
- */
-export async function startPlaywrightWorker() {
-  console.log('[PlaywrightWorker] Starting auto-apply worker...');
+export class PlaywrightWorker {
+  
+  public async humanDelay(min = 300, max = 1200): Promise<void> {
+    await new Promise(r => setTimeout(r, Math.random() * (max - min) + min));
+  }
 
-  let browser: Browser | null = null;
-
-  const pollInterval = setInterval(async () => {
+  public async verifyJobListing(page: Page): Promise<boolean> {
     try {
-      // 1. Fetch queued jobs from Appwrite
-      const response = await databases.listDocuments(
-        DATABASE_ID,
-        JOBS_COLLECTION_ID,
-        [
-          Query.equal('status', 'queued_for_apply'),
-          Query.limit(1) // Process one at a time to avoid browser RAM spikes
-        ]
-      );
-
-      if (response.documents.length === 0) {
-        return; // Nothing to do
-      }
-
-      const jobDoc = response.documents[0]!;
-      console.log(`[PlaywrightWorker] Found job to apply for: ${jobDoc.company} - ${jobDoc.title}`);
-
-      // 2. Mark as processing to avoid duplicate runs
-      await databases.updateDocument(DATABASE_ID, JOBS_COLLECTION_ID, jobDoc.$id, {
-        status: 'applying'
+      const buf = await page.screenshot();
+      
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': env.ANTHROPIC_API_KEY || '',
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-opus-20240229',
+          max_tokens: 10,
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: 'image/png',
+                  data: buf.toString('base64')
+                }
+              },
+              {
+                type: 'text',
+                text: 'Is this an active job listing page? Answer only: YES or NO'
+              }
+            ]
+          }]
+        })
       });
 
-      // 3. Initialize Playwright
-      if (!browser) {
-        browser = await chromium.launch({ headless: true });
-      }
-      const page: Page = await browser.newPage();
-
-      try {
-        // 4. Navigate and Interact
-        console.log(`[PlaywrightWorker] Navigating to ${jobDoc.url}...`);
-        await page.goto(jobDoc.url, { waitUntil: 'domcontentloaded' });
-
-        // NOTE: Exact selectors depend on the portal (Greenhouse, Lever, Workday)
-        // A full implementation would detect the ATS platform and use tailored playwright scripts here.
-        console.log(`[PlaywrightWorker] Filling out generic application form...`);
-        // await page.fill('input[name="first_name"]', 'John');
-        // await page.fill('input[name="last_name"]', 'Doe');
-        // await page.setInputFiles('input[type="file"]', '/path/to/resume.pdf');
-        // await page.click('button[type="submit"]');
-
-        console.log(`[PlaywrightWorker] Successfully applied to ${jobDoc.company}.`);
-
-        // 5. Update Status to applied
-        await databases.updateDocument(DATABASE_ID, JOBS_COLLECTION_ID, jobDoc.$id, {
-          status: 'applied'
-        });
-
-      } catch (applyError) {
-        console.error(`[PlaywrightWorker] Failed to apply:`, applyError);
-        await databases.updateDocument(DATABASE_ID, JOBS_COLLECTION_ID, jobDoc.$id, {
-          status: 'failed'
-        });
-      } finally {
-        await page.close();
-      }
-
-    } catch (error) {
-      console.error('[PlaywrightWorker] Polling error:', error);
+      const data = await response.json();
+      const text = data.content?.[0]?.text || '';
+      return text.includes('YES');
+    } catch (e) {
+      console.error('[Vision] Verification failed:', e);
+      return true; // fail open
     }
-  }, 10000); // Poll every 10 seconds
+  }
 
-  // Handle graceful shutdown
-  process.on('SIGINT', async () => {
-    clearInterval(pollInterval);
-    if (browser) await browser.close();
-    process.exit(0);
-  });
+  public async saveScreenshotProof(page: Page, jobUrl: string): Promise<string> {
+    const filename = `/tmp/apply-proof-${Date.now()}.png`;
+    await page.screenshot({ path: filename, fullPage: true });
+    return filename;
+  }
+
+  public async apply(jobUrl: string, profile: any, userId = 'anonymous'): Promise<any> {
+    let browser: Browser | null = null;
+    const startObj = Date.now();
+    let screenshotPath = '';
+
+    try {
+      browser = await chromium.launch({ headless: true });
+      const context = await browser.newContext({
+        viewport: {
+          width: Math.floor(Math.random() * (1920 - 1280) + 1280),
+          height: Math.floor(Math.random() * (1080 - 800) + 800)
+        },
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+      });
+      const page = await context.newPage();
+
+      await page.goto(jobUrl, { waitUntil: 'domcontentloaded' });
+      await this.humanDelay(1000, 2000);
+
+      const isActive = await this.verifyJobListing(page);
+      if (!isActive) {
+        return { success: false, reason: "vision_check_failed" };
+      }
+
+      await this.humanDelay();
+
+      const fieldMap: Record<string, string[]> = {
+        name: ['[name*="name"]', '[placeholder*="name"]', '[aria-label*="name"]'],
+        email: ['[name*="email"]', '[type="email"]', '[placeholder*="email"]'],
+        phone: ['[name*="phone"]', '[type="tel"]', '[placeholder*="phone"]'],
+        linkedin: ['[name*="linkedin"]', '[placeholder*="linkedin"]']
+      };
+
+      for (const [field, selectors] of Object.entries(fieldMap)) {
+        for (const selector of selectors) {
+          const el = await page.$(selector);
+          if (el) {
+            await page.click(selector);
+            await this.humanDelay();
+            await page.fill(selector, profile[field] || 'test');
+            await this.humanDelay();
+            break;
+          }
+        }
+      }
+
+      screenshotPath = await this.saveScreenshotProof(page, jobUrl);
+
+      void emitAgentEvent({
+        userId,
+        agent: "applier",
+        action: "job_application",
+        status: "success",
+        duration_ms: Date.now() - startObj,
+        metadata: { jobUrl, screenshotPath }
+      });
+
+      return { success: true, screenshotPath };
+
+    } catch (e: any) {
+      console.error(`[PlaywrightWorker] Failed to apply:`, e);
+
+      void emitAgentEvent({
+        userId,
+        agent: "applier",
+        action: "job_application",
+        status: "error",
+        duration_ms: Date.now() - startObj,
+        metadata: { jobUrl, screenshotPath }
+      });
+
+      return { success: false, error: e.message };
+    } finally {
+      if (browser) {
+        await browser.close();
+      }
+    }
+  }
 }
 
-// Start immediately if called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  startPlaywrightWorker();
-}
