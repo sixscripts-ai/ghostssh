@@ -35,8 +35,9 @@ export class LinkedInParserService {
         if (fileName === 'Profile.csv') {
           const records = parse(zipEntry.getData().toString('utf8'), { columns: true, skip_empty_lines: true, bom: true });
           if (records.length > 0) {
-            headline = records[0]['Headline'] || records[0]['Headline'] || '';
-            summary = records[0]['Summary'] || records[0]['About'] || '';
+            const first = records[0] as any;
+            headline = first['Headline'] || first['Title'] || '';
+            summary = first['Summary'] || first['About'] || '';
           }
         } 
         else if (fileName === 'Skills.csv') {

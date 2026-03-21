@@ -31,16 +31,16 @@ describe('LinkedInParserService', () => {
     expect(profile.skills).toEqual(['JavaScript', 'TypeScript', 'React']);
     
     expect(profile.positions).toHaveLength(1);
-    expect(profile.positions[0].company).toBe('Google');
-    expect(profile.positions[0].title).toBe('Software Engineer');
-    expect(profile.positions[0].description).toBe('Built things');
-    expect(profile.positions[0].dates).toBe('2020-01-01 - 2023-01-01');
+    expect(profile.positions![0]!.company).toBe('Google');
+    expect(profile.positions![0]!.title).toBe('Software Engineer');
+    expect(profile.positions![0]!.description).toBe('Built things');
+    expect(profile.positions![0]!.dates).toBe('2020-01-01 - 2023-01-01');
     
     expect(profile.education).toHaveLength(1);
-    expect(profile.education[0].school).toBe('MIT');
-    expect(profile.education[0].degree).toBe('B.S.');
-    expect(profile.education[0].field).toBe('Computer Science');
-    expect(profile.education[0].dates).toBe('2015-09-01 - 2019-06-01');
+    expect(profile.education![0]!.school).toBe('MIT');
+    expect(profile.education![0]!.degree).toBe('B.S.');
+    expect(profile.education![0]!.field).toBe('Computer Science');
+    expect(profile.education![0]!.dates).toBe('2015-09-01 - 2019-06-01');
   });
 
   it('should handle missing files gracefully', () => {
