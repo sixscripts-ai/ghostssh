@@ -3,8 +3,10 @@
   "private": true,
   "workspaces": ["apps/*"],
   "scripts": {
-    "dev": "npm run dev --workspace=apps/api",
-    "build": "npm run build --workspace=apps/api",
+    "dev": "npm run dev:api & npm run dev:dashboard",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:dashboard": "npm run dev --workspace=apps/dashboard",
+    "build": "npm run build --workspace=apps/api && npm run build --workspace=apps/dashboard",
     "typecheck": "npm run typecheck --workspace=apps/api",
     "lint": "npm run lint --workspace=apps/api",
     "test": "npm run test --workspace=apps/api"
