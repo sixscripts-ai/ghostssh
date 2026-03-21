@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { SearchRequest, ProviderName } from "@/types/api";
+import { ProfileUploader } from "./ProfileUploader";
 
 const PROVIDERS: { value: ProviderName; label: string }[] = [
   { value: "minimax", label: "Minimax M2.5" },
@@ -126,8 +127,9 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
         </div>
 
         <div className="form-group full-width">
+          <ProfileUploader onUploadComplete={(text) => setLinkedinText(text)} />
           <label className="form-label" htmlFor="linkedin">
-            LinkedIn Profile Text
+            Or Paste LinkedIn Profile Text Manually
           </label>
           <textarea
             id="linkedin"
@@ -135,7 +137,7 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
             placeholder="Paste your LinkedIn profile summary here..."
             value={linkedinText}
             onChange={(e) => setLinkedinText(e.target.value)}
-            rows={3}
+            rows={6}
           />
         </div>
 
