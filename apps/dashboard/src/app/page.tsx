@@ -7,6 +7,7 @@ import JobCard from "@/components/JobCard";
 import JobDetail from "@/components/JobDetail";
 import ProfileSummary from "@/components/ProfileSummary";
 import OpinionCards from "@/components/OpinionCards";
+import ActivityFeed from "@/components/ActivityFeed";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
 
@@ -65,6 +66,10 @@ export default function HomePage() {
       <div style={{ marginTop: "var(--space-xl)" }}>
         <SearchForm onSubmit={handleSearch} isLoading={isLoading} />
       </div>
+
+      {lastRequest?.githubUsername && (
+        <ActivityFeed githubUsername={lastRequest.githubUsername} />
+      )}
 
       {isLoading && <LoadingState />}
 
