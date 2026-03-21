@@ -28,7 +28,7 @@ export async function startPlaywrightWorker() {
         return; // Nothing to do
       }
 
-      const jobDoc = response.documents[0];
+      const jobDoc = response.documents[0]!;
       console.log(`[PlaywrightWorker] Found job to apply for: ${jobDoc.company} - ${jobDoc.title}`);
 
       // 2. Mark as processing to avoid duplicate runs
