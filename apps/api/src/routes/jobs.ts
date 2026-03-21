@@ -68,40 +68,35 @@ export async function jobRoutes(app: FastifyInstance) {
     }
   });
 
-  const HistoryQuery = z.object({
-    githubUsername: z.string().min(1)
-  });
-
   app.get("/jobs/history", async (req, rep) => {
     try {
-      const { githubUsername } = HistoryQuery.parse(req.query);
-      
-      const profiles = await databases.listDocuments(DATABASE_ID, PROFILES_COLLECTION_ID, [
+      const { githubUsername } = req.query as { githubUsername?: string };
+      if (!githubUsername) {
+        return rep.status(400).send({ error: "BAD_REQUEST", message: "githubUsername is required" });
+      }
+      const profiles = await databases.listDocuments(DATABASE_ID, "profiles", [
         Query.equal("githubUsername", githubUsername),
         Query.limit(1)
       ]);
-
-      if (profiles.documents.length === 0) {
+      if (profiles.total === 0) {
         return rep.send({ profile: null, jobs: [], applications: [] });
       }
-
       const profile = profiles.documents[0] as any;
-
-      const jobs = await databases.listDocuments(DATABASE_ID, JOBS_COLLECTION_ID, [
-        Query.equal("profileId", profile.$id),
-        Query.orderDesc("matchScore"),
-        Query.limit(50)
+      const [jobs, applications] = await Promise.all([
+        databases.listDocuments(DATABASE_ID, JOBS_COLLECTION_ID, [
+          Query.equal("profileId", profile.$id),
+          Query.orderDesc("matchScore"),
+          Query.limit(50)
+        ]),
+        databases.listDocuments(DATABASE_ID, APPLICATIONS_COLLECTION_ID, [
+          Query.equal("profileId", profile.$id),
+          Query.orderDesc("$createdAt"),
+          Query.limit(25)
+        ])
       ]);
-
-      const applications = await databases.listDocuments(DATABASE_ID, APPLICATIONS_COLLECTION_ID, [
-        Query.equal("profileId", profile.$id),
-        Query.orderDesc("$createdAt"),
-        Query.limit(25)
-      ]);
-
       return rep.send({ profile, jobs: jobs.documents, applications: applications.documents });
     } catch (e: any) {
-      rep.status(500).send({ error: e.message });
+      return rep.status(500).send({ error: "INTERNAL_SERVER_ERROR", message: e.message });
     }
   });
 
