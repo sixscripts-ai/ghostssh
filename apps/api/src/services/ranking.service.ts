@@ -5,6 +5,7 @@ import type { ProviderName } from "../types/provider.js";
 import { withFallback } from "../providers/index.js";
 import { jobRankPrompt } from "../prompts/job-rank.js";
 import { safeParseJson } from "../lib/safe-parse-json.js";
+import { emitAgentEvent } from "../lib/event-bus.js";
 
 const BATCH_SIZE = 25;
 
@@ -25,29 +26,36 @@ export class RankingService {
    * Runs batches in parallel, merges results, re-sorts by score.
    */
   async rank(profile: CandidateProfile, jobs: JobPosting[], provider?: ProviderName): Promise<RankedJob[]> {
-    const filtered = jobs.filter(j =>
-      /(ai|ml|machine.learning|llm|agent|python|backend|platform|infra|data|research)/i
-        .test(`${j.title} ${j.description} ${j.tags.join(" ")}`)
-    );
+    const start = Date.now();
+    try {
+      const filtered = jobs.filter(j =>
+        /(ai|ml|machine.learning|llm|agent|python|backend|platform|infra|data|research)/i
+          .test(`${j.title} ${j.description} ${j.tags.join(" ")}`)
+      );
 
-    if (filtered.length === 0) return [];
+      if (filtered.length === 0) return [];
 
-    console.log(`[Ranking] ${filtered.length} jobs after filter → batching into groups of ${BATCH_SIZE}`);
+      console.log(`[Ranking] ${filtered.length} jobs after filter → batching into groups of ${BATCH_SIZE}`);
 
-    // Batch into groups of 25
-    const batches = chunk(filtered, BATCH_SIZE);
-    console.log(`[Ranking] Running ${batches.length} batch(es) in parallel...`);
+      // Batch into groups of 25
+      const batches = chunk(filtered, BATCH_SIZE);
+      console.log(`[Ranking] Running ${batches.length} batch(es) in parallel...`);
 
-    // Rank each batch in parallel
-    const batchResults = await Promise.all(
-      batches.map((batch, i) => this.rankBatch(profile, batch, provider, i + 1, batches.length))
-    );
+      // Rank each batch in parallel
+      const batchResults = await Promise.all(
+        batches.map((batch, i) => this.rankBatch(profile, batch, provider, i + 1, batches.length))
+      );
 
-    // Merge all results and re-sort by score
-    const merged = batchResults.flat().sort((a, b) => b.score - a.score);
-    console.log(`[Ranking] Merged ${merged.length} ranked jobs. Top: ${merged[0]?.title ?? 'none'} (${merged[0]?.score ?? 0})`);
+      // Merge all results and re-sort by score
+      const merged = batchResults.flat().sort((a, b) => b.score - a.score);
+      console.log(`[Ranking] Merged ${merged.length} ranked jobs. Top: ${merged[0]?.title ?? 'none'} (${merged[0]?.score ?? 0})`);
 
-    return merged;
+      await emitAgentEvent({ userId: "system", agent: "ranker", action: "rank_jobs", status: "success", duration_ms: Date.now() - start, result_count: merged.length });
+      return merged;
+    } catch(e: any) {
+      await emitAgentEvent({ userId: "system", agent: "ranker", action: "rank_jobs", status: "error", duration_ms: Date.now() - start, error_message: e.message });
+      throw e;
+    }
   }
 
   /**

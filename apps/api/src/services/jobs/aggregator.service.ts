@@ -3,6 +3,7 @@ import { GreenhouseSource } from "./greenhouse.source.js";
 import { LeverSource } from "./lever.source.js";
 import { RemotiveSource } from "./remotive.source.js";
 import { CareerPageSource } from "./career-page.source.js";
+import { emitAgentEvent } from "../../lib/event-bus.js";
 
 export class JobAggregatorService {
   private g = new GreenhouseSource();
@@ -15,8 +16,16 @@ export class JobAggregatorService {
    * Original behavior — broad sweep.
    */
   async fetchAll(): Promise<JobPosting[]> {
-    const [a, b, c] = await Promise.all([this.g.fetch(), this.l.fetch(), this.r.fetch()]);
-    return this.dedup([...a, ...b, ...c]);
+    const start = Date.now();
+    try {
+      const [a, b, c] = await Promise.all([this.g.fetch(), this.l.fetch(), this.r.fetch()]);
+      const result = this.dedup([...a, ...b, ...c]);
+      await emitAgentEvent({ userId: "system", agent: "scout", action: "fetch_jobs", status: "success", duration_ms: Date.now() - start, result_count: result.length });
+      return result;
+    } catch(e: any) {
+      await emitAgentEvent({ userId: "system", agent: "scout", action: "fetch_jobs", status: "error", duration_ms: Date.now() - start, error_message: e.message });
+      throw e;
+    }
   }
 
   /**

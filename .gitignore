@@ -23,3 +23,5 @@ apps/dashboard/.env
 
 # API env
 apps/api/.env
+.vercel
+.env*.local

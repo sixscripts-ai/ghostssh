@@ -1,3 +1,5 @@
+import { emitAgentEvent } from '../lib/event-bus.js';
+
 /**
  * Resilient URL scraper using Jina AI Reader with retry + raw fetch fallback.
  * Never throws — always returns partial results with inline warnings.
@@ -21,20 +23,28 @@ export class JinaScraperService {
    * Returns concatenated markdown. Individual failures produce inline warnings.
    */
   public async scrapeUrls(urls: string[]): Promise<string> {
-    if (!urls || urls.length === 0) return '';
-    console.log(`[JinaScraper] Scraping ${urls.length} URLs with retry + fallback...`);
+    const start = Date.now();
+    try {
+      if (!urls || urls.length === 0) return '';
+      console.log(`[JinaScraper] Scraping ${urls.length} URLs with retry + fallback...`);
 
-    const results = await Promise.all(urls.map(url => this.scrapeWithResilience(url)));
+      const results = await Promise.all(urls.map(url => this.scrapeWithResilience(url)));
 
-    const succeeded = results.filter(r => r.success).length;
-    const failed = results.filter(r => !r.success).length;
-    console.log(`[JinaScraper] Done: ${succeeded} succeeded, ${failed} failed`);
+      const succeeded = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+      console.log(`[JinaScraper] Done: ${succeeded} succeeded, ${failed} failed`);
 
-    return results
-      .map(r => r.success
-        ? `\n\n--- Content from ${r.url} (via ${r.method}) ---\n\n${r.content}\n\n`
-        : `\n\n--- ⚠️ Failed to scrape ${r.url} after ${r.retries} retries ---\n\n`)
-      .join('\n');
+      await emitAgentEvent({ userId: "system", agent: "scout", action: "scrape_urls", status: "success", duration_ms: Date.now() - start, result_count: urls.length });
+
+      return results
+        .map(r => r.success
+          ? `\n\n--- Content from ${r.url} (via ${r.method}) ---\n\n${r.content}\n\n`
+          : `\n\n--- ⚠️ Failed to scrape ${r.url} after ${r.retries} retries ---\n\n`)
+        .join('\n');
+    } catch(e: any) {
+      await emitAgentEvent({ userId: "system", agent: "scout", action: "scrape_urls", status: "error", duration_ms: Date.now() - start, error_message: e.message });
+      throw e;
+    }
   }
 
   /**
@@ -67,6 +77,8 @@ export class JinaScraperService {
     } catch (err: any) {
       console.warn(`[JinaScraper] Raw fallback also failed for ${url}: ${err.message}`);
     }
+
+    emitAgentEvent({ userId: "system", agent: "scout", action: "scrape_url_failed", status: "error", duration_ms: 0, error_message: `Failed all attempts for ${url}` }).catch(() => {});
 
     return { url, content: '', success: false, method: 'failed', retries: MAX_RETRIES };
   }

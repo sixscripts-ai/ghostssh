@@ -1,6 +1,7 @@
 import { ID, Query } from 'node-appwrite';
 import { databases, DATABASE_ID, JOBS_COLLECTION_ID } from '../lib/appwrite.js';
 import { MemoryClient } from 'mem0ai';
+import { emitAgentEvent } from '../lib/event-bus.js';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ export class AgentMemoryService {
   ): Promise<void> {
     if (!this.mem0) return;
 
+    const start = Date.now();
     try {
       console.log(`[MemoryService] 💾 Storing memory for ${userId}: "${content.slice(0, 80)}..."`);
       await this.mem0.add(
@@ -68,8 +70,10 @@ export class AgentMemoryService {
           metadata: { source: 'ghostssh', type, timestamp: new Date().toISOString() }
         }
       );
+      await emitAgentEvent({ userId, agent: "memory", action: "memory_write", status: "success", duration_ms: Date.now() - start });
     } catch (e: any) {
       console.error(`[MemoryService] ❌ addMemory failed for ${userId}:`, e.message);
+      await emitAgentEvent({ userId, agent: "memory", action: "memory_write", status: "error", duration_ms: Date.now() - start, error_message: e.message });
     }
   }
 
@@ -84,16 +88,19 @@ export class AgentMemoryService {
   ): Promise<MemoryResult[]> {
     if (!this.mem0) return [];
 
+    const start = Date.now();
     try {
       console.log(`[MemoryService] 🔍 Searching memories for ${userId}: "${query.slice(0, 60)}..."`);
       const results = await this.mem0.search(query, { user_id: userId, limit });
 
       if (!results || results.length === 0) {
         console.log('[MemoryService] No matching memories found.');
+        await emitAgentEvent({ userId, agent: "memory", action: "memory_search", status: "success", duration_ms: Date.now() - start, result_count: 0 });
         return [];
       }
 
       console.log(`[MemoryService] Found ${results.length} relevant memories.`);
+      await emitAgentEvent({ userId, agent: "memory", action: "memory_search", status: "success", duration_ms: Date.now() - start, result_count: results.length });
       return results.map((r: any) => ({
         id: r.id || '',
         memory: r.memory || r.text || '',
@@ -101,6 +108,7 @@ export class AgentMemoryService {
       }));
     } catch (e: any) {
       console.error(`[MemoryService] ❌ searchMemory failed:`, e.message);
+      await emitAgentEvent({ userId, agent: "memory", action: "memory_search", status: "error", duration_ms: Date.now() - start, error_message: e.message });
       return [];
     }
   }
