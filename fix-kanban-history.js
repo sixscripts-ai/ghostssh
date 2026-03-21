@@ -1,35 +1,10 @@
-import { Query } from 'node-appwrite';
-import { databases, DATABASE_ID, JOBS_COLLECTION_ID, APPLICATIONS_COLLECTION_ID, PROFILES_COLLECTION_ID } from '../lib/appwrite.js';
-import { agentMemoryService } from '../agent/memory.service.js';
-import type { FastifyInstance } from "fastify";
-import { z } from "zod";
-import { AgentService } from "../services/agent.service.js";
-import { checkUsage, incrementUsage } from "../lib/usage-tracker.js";
+const fs = require('fs');
+const file = 'apps/api/src/routes/jobs.ts';
+let code = fs.readFileSync(file, 'utf8');
 
-const Body=z.object({ githubUsername:z.string().min(1).optional(), linkedinText:z.string().optional(), manualTargetTitles:z.array(z.string()).optional(), manualLocations:z.array(z.string()).optional(), provider:z.enum(["minimax","openai","anthropic","gemini","openrouter"]).optional(), topK:z.number().int().min(1).max(25).optional() });
+code = `import { Query } from 'node-appwrite';\nimport { databases, DATABASE_ID, JOBS_COLLECTION_ID, APPLICATIONS_COLLECTION_ID, PROFILES_COLLECTION_ID } from '../lib/appwrite.js';\nimport { agentMemoryService } from '../agent/memory.service.js';\n` + code;
 
-export async function jobRoutes(app: FastifyInstance) {
-  const agent=new AgentService();
-  app.post("/jobs/search", async(req,rep)=>{ 
-    const r=Body.parse(req.body); 
-    const userId = r.githubUsername || "anonymous";
-    const usage = await checkUsage(userId);
-    
-    if (!usage.allowed) {
-      return rep.status(429).send({ 
-        error: "RATE_LIMITED", 
-        message: `Free tier allows 3 searches/day. Upgrade to Pro for unlimited.`,
-        runsToday: usage.runsToday
-      });
-    }
-    
-    r.topK = Math.min(r.topK ?? 10, usage.maxJobs);
-    
-    const result = await agent.search(r);
-    incrementUsage(userId); // fire and forget, no await
-    rep.send(result);
-  });
-
+const kanbanRoute = `
   const KanbanBody = z.object({
     status: z.enum(["applied", "interviewing", "offer", "rejected", "not_interested"]),
     company: z.string().optional(),
@@ -52,22 +27,23 @@ export async function jobRoutes(app: FastifyInstance) {
       const date = new Date().toISOString().split("T")[0];
 
       const memoryMap: Record<string, string> = {
-        applied: `Applied to "${role}" at ${company} on ${date}`,
-        interviewing: `Currently interviewing at ${company} for "${role}"`,
-        offer: `Received offer from ${company} for "${role}" on ${date}`,
-        rejected: `Rejected by ${company} for "${role}" — not a fit`,
-        not_interested: `Not interested in "${role}" at ${company} — user dismissed`
+        applied: \`Applied to "\${role}" at \${company} on \${date}\`,
+        interviewing: \`Currently interviewing at \${company} for "\${role}"\`,
+        offer: \`Received offer from \${company} for "\${role}" on \${date}\`,
+        rejected: \`Rejected by \${company} for "\${role}" — not a fit\`,
+        not_interested: \`Not interested in "\${role}" at \${company} — user dismissed\`
       };
 
-      void agentMemoryService.addMemory(userId, memoryMap[body.status] || "Status updated", "application");
+      void agentMemoryService.addMemory(userId, memoryMap[body.status], "application");
 
       rep.send({ success: true, id, status: body.status });
     } catch (e: any) {
       console.error("[Jobs:Kanban]", e.message);
       rep.status(500).send({ error: e.message });
     }
-  });
+  });`;
 
+const historyRoute = `
   const HistoryQuery = z.object({
     githubUsername: z.string().min(1)
   });
@@ -85,7 +61,7 @@ export async function jobRoutes(app: FastifyInstance) {
         return rep.send({ profile: null, jobs: [], applications: [] });
       }
 
-      const profile = profiles.documents[0] as any;
+      const profile = profiles.documents[0];
 
       const jobs = await databases.listDocuments(DATABASE_ID, JOBS_COLLECTION_ID, [
         Query.equal("profileId", profile.$id),
@@ -104,5 +80,8 @@ export async function jobRoutes(app: FastifyInstance) {
       rep.status(500).send({ error: e.message });
     }
   });
+`;
 
-}
+code = code.replace(/}\n*$/, kanbanRoute + "\n" + historyRoute + "\n}");
+
+fs.writeFileSync(file, code);
