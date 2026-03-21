@@ -12,7 +12,10 @@ const Schema = z.object({
     role: z.string(),
     score: z.number().min(0).max(100),
     rationale: z.string(),
-    url: z.string().optional()
+    url: z.string().optional(),
+    recruiterNote: z.string().optional(),
+    bestTimeToApply: z.string().optional(),
+    confidenceScore: z.number().min(0).max(100).optional()
   }))
 });
 
@@ -33,7 +36,7 @@ Your job is to look at a list of ranked jobs and provide exactly 3 strategic pic
 2. "watch_this": A strong company growing fast, but maybe the specific role isn't a 100% perfect fit. Suggest waiting or watching.
 3. "cold_outreach": A great fit company where the user should reach out directly even if the role isn't perfectly aligned, or to get ahead of the curve.
 
-Return JSON matching: { "opinions": [{ "type": "apply_today|watch_this|cold_outreach", "company": "...", "role": "...", "score": 95, "rationale": "2 sentences explaining why.", "url": "..." }] }
+Return JSON matching: { "opinions": [{ "type": "apply_today|watch_this|cold_outreach", "company": "...", "role": "...", "score": 95, "rationale": "2 sentences explaining why.", "url": "...", "recruiterNote": "one sentence on how to approach — direct apply, cold email, referral", "bestTimeToApply": "specific timing advice", "confidenceScore": 90 }] }
 Do not return more than 3 picks. Make sure the type matches exactly.`;
 
     const user = JSON.stringify({

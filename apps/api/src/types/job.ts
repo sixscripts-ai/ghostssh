@@ -3,5 +3,5 @@ export type JobPosting = { id: string; source: JobSource; company: string; title
 export type RankedJob = JobPosting & { score: number; rationale: string; missingRequirements: string[]; matchingSkills: string[]; networkConnections?: string[] };
 export type ApplicationKit = { title: string; company: string; url: string; fitSummary: string; recruiterPitch: string; coverLetter: string };
 export type OpinionPickType = "apply_today" | "watch_this" | "cold_outreach";
-export type OpinionPick = { type: OpinionPickType; company: string; role: string; score: number; rationale: string; url?: string };
+export type OpinionPick = { type: OpinionPickType; company: string; role: string; score: number; rationale: string; url?: string; recruiterNote?: string; bestTimeToApply?: string; confidenceScore?: number; };
 
