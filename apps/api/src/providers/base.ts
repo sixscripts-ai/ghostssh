@@ -10,7 +10,7 @@ export abstract class BaseProvider implements LlmProvider {
   }
   
   async generate(params: LlmGenerateParams): Promise<string> {
-    params.user = guardTokenLimit(params.user, COST_LIMITS.rankingBatch, "base_provider_generate");
+    params.user = guardTokenLimit(params.user, COST_LIMITS.rankingBatch, "provider_input");
     return this._generate(params);
   }
 
