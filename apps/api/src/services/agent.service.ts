@@ -1,3 +1,4 @@
+import { agentMemoryService } from '../agent/memory.service.js';
 import type { ProviderName } from "../types/provider.js";
 import type { ApplicationKit, RankedJob } from "../types/job.js";
 import type { CandidateProfile } from "../types/profile.js";
@@ -44,6 +45,7 @@ export class AgentService {
       }).catch(err => console.error(`Failed to save job ${job.url} to Appwrite:`, err))
     ));
 
+    void agentMemoryService.synthesizePreferences(input.githubUsername || "anonymous");
     return {profile,jobs:top,kits,opinions,providerUsed:input.provider};
   }
 }

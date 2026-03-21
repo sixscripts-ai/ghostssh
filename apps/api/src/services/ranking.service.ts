@@ -1,3 +1,4 @@
+import { agentMemoryService } from '../agent/memory.service.js';
 import { GitHubService } from "./github.service.js";
 import { z } from "zod";
 import type { JobPosting, RankedJob } from "../types/job.js";
@@ -30,6 +31,9 @@ export class RankingService {
   async rank(profile: CandidateProfile, jobs: JobPosting[], provider?: ProviderName): Promise<RankedJob[]> {
     const start = Date.now();
     try {
+      const prefSummary = await agentMemoryService.getPreferenceSummary(
+        profile.githubUsername || "anonymous"
+      ).catch(() => "");
       const filtered = jobs.filter(j =>
         /(ai|ml|machine.learning|llm|agent|python|backend|platform|infra|data|research)/i
           .test(`${j.title} ${j.description} ${j.tags.join(" ")}`)
@@ -112,17 +116,21 @@ export class RankingService {
     batch: JobPosting[],
     provider: ProviderName | undefined,
     batchNum: number,
-    totalBatches: number
+    totalBatches: number,
+    prefSummary: string = ""
   ): Promise<RankedJob[]> {
     try {
       console.log(`[Ranking] Batch ${batchNum}/${totalBatches}: ${batch.length} jobs`);
 
       const raw = await withFallback(llm => llm.generate({
-        system: jobRankPrompt.system,
+        system: jobRankPrompt.system + (prefSummary ? "\n\nUser preference summary (inject into ranking decisions):\n" + prefSummary : ""),
         json: true,
         maxOutputTokens: 4000,
         user: JSON.stringify({
-          profile,
+          profile: {
+             ...profile,
+             preferenceSummary: prefSummary || undefined
+          },
           jobs: batch.map(j => ({
             id: j.id,
             company: j.company,
