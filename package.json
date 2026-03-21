@@ -2,6 +2,10 @@
   "name": "ghostssh",
   "private": true,
   "workspaces": ["apps/*"],
+  "dependencies": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
   "scripts": {
     "dev": "npm run dev:api & npm run dev:dashboard",
     "dev:api": "npm run dev --workspace=apps/api",
@@ -12,5 +16,9 @@
     "typecheck": "npm run typecheck --workspace=apps/api",
     "lint": "npm run lint --workspace=apps/api",
     "test": "npm run test --workspace=apps/api"
+  },
+  "overrides": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   }
 }
