@@ -17,7 +17,8 @@ export class JinaScraperService {
         const response = await fetch(jinaUrl, {
           headers: {
             'X-Return-Format': 'markdown'
-          }
+          },
+          signal: AbortSignal.timeout(45_000),
         });
 
         if (!response.ok) {
