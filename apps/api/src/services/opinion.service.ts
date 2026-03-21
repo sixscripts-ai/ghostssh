@@ -4,6 +4,7 @@ import type { CandidateProfile } from "../types/profile.js";
 import type { ProviderName } from "../types/provider.js";
 import { withFallback } from "../providers/index.js";
 import { safeParseJson } from "../lib/safe-parse-json.js";
+import { outreachService } from './outreach.service.js';
 
 const Schema = z.object({
   opinions: z.array(z.object({
@@ -64,7 +65,22 @@ Do not return more than 3 picks. Make sure the type matches exactly.`;
       }), provider);
 
       const parsed = Schema.parse(safeParseJson(raw));
-      return parsed.opinions;
+      const enriched = await Promise.allSettled(
+        parsed.opinions.map(async (op) => {
+          if (op.type === 'cold_outreach' && !op.recruiterNote) {
+            const contact = await outreachService.findBestContact(op.company)
+              .catch(() => null);
+            if (contact) {
+              return { ...op, recruiterNote: `Reach out to ${contact.name} (${contact.role})` };
+            }
+          }
+          return op;
+        })
+      );
+      const opinions = enriched
+        .filter(r => r.status === 'fulfilled')
+        .map(r => (r as PromiseFulfilledResult<any>).value);
+      return opinions as OpinionPick[];
     } catch (err: any) {
       console.error("[OpinionEngine] Failed to generate opinions:", err.message);
       return [];
