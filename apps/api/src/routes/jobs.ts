@@ -13,13 +13,17 @@ export async function jobRoutes(app: FastifyInstance) {
     const usage = await checkUsage(userId);
     
     if (!usage.allowed) {
-      return rep.status(429).send({ error: "RATE_LIMITED", message: "Upgrade to Pro for unlimited searches" });
+      return rep.status(429).send({ 
+        error: "RATE_LIMITED", 
+        message: `Free tier allows 3 searches/day. Upgrade to Pro for unlimited.`,
+        runsToday: usage.runsToday
+      });
     }
     
     r.topK = Math.min(r.topK ?? 10, usage.maxJobs);
     
     const result = await agent.search(r);
-    await incrementUsage(userId);
+    incrementUsage(userId); // fire and forget, no await
     rep.send(result);
   });
 }
