@@ -7,7 +7,7 @@ import { ProfileBuilderService, type BuildProfileInput } from "./profile-builder
 import { RankingService } from "./ranking.service.js";
 
 export type AgentSearchInput = BuildProfileInput & { topK?:number };
-export type AgentSearchResult = { profile:CandidateProfile; jobs:RankedJob[]; kits:ApplicationKit[]; providerUsed?:ProviderName };
+export type AgentSearchResult = { profile:CandidateProfile; jobs:RankedJob[]; kits:ApplicationKit[]; opinions: import("../types/job.js").OpinionPick[]; providerUsed?:ProviderName };
 
 import { ID } from 'node-appwrite';
 import { databases, DATABASE_ID, JOBS_COLLECTION_ID } from '../lib/appwrite.js';
@@ -21,6 +21,10 @@ export class AgentService {
     const ranked=await this.ranking.rank(profile,jobs,input.provider);
     const top=ranked.slice(0,input.topK??10);
     const kits=await Promise.all(top.slice(0,5).map(j=>this.kits.create(profile,j,input.provider)));
+    
+    // Generate intelligent opinions from the top results
+    const { opinionService } = await import("./opinion.service.js");
+    const opinions = await opinionService.generate(profile, ranked, input.provider);
     
     // Save to Appwrite Database
     console.log(`Saving ${top.length} jobs to Appwrite...`);
@@ -40,6 +44,6 @@ export class AgentService {
       }).catch(err => console.error(`Failed to save job ${job.url} to Appwrite:`, err))
     ));
 
-    return {profile,jobs:top,kits,providerUsed:input.provider};
+    return {profile,jobs:top,kits,opinions,providerUsed:input.provider};
   }
 }
