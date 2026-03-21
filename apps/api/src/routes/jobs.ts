@@ -1,6 +1,7 @@
 import { Query } from 'node-appwrite';
 import { databases, DATABASE_ID, JOBS_COLLECTION_ID, APPLICATIONS_COLLECTION_ID, PROFILES_COLLECTION_ID } from '../lib/appwrite.js';
 import { agentMemoryService } from '../agent/memory.service.js';
+import { outreachService } from '../services/outreach.service.js';
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { AgentService } from "../services/agent.service.js";
@@ -96,6 +97,31 @@ export async function jobRoutes(app: FastifyInstance) {
       ]);
       return rep.send({ profile, jobs: jobs.documents, applications: applications.documents });
     } catch (e: any) {
+      return rep.status(500).send({ error: "INTERNAL_SERVER_ERROR", message: e.message });
+    }
+  });
+
+  const OutreachBody = z.object({
+    userId: z.string().min(1),
+    company: z.string().min(1),
+    profileSummary: z.string().min(1)
+  });
+
+  app.post('/jobs/outreach', async (req, rep) => {
+    try {
+      const body = OutreachBody.parse(req.body);
+      const draft = await outreachService.createOutreachForJob(
+        body.userId, body.company, body.profileSummary
+      );
+      if (!draft) {
+        return rep.status(404).send({
+          error: "NO_CONTACT_FOUND",
+          message: "Could not find a contact at this company"
+        });
+      }
+      return rep.send(draft);
+    } catch (e: any) {
+      console.error("[Jobs:Outreach]", e.message);
       return rep.status(500).send({ error: "INTERNAL_SERVER_ERROR", message: e.message });
     }
   });
