@@ -43,6 +43,11 @@ const EnvSchema = z.object({
   APPWRITE_JOBS_COLLECTION_ID: z.string().default("jobs"),
   APPWRITE_PROFILES_COLLECTION_ID: z.string().default("profiles"),
   APPWRITE_APPLICATIONS_COLLECTION_ID: z.string().default("applications"),
+
+  // Auto-apply (Playwright Applier Agent)
+  AUTO_APPLY_ENABLED: z.string().default("false"),
+  AUTO_APPLY_MIN_SCORE: z.coerce.number().default(85),
+  AUTO_APPLY_MAX_PER_DAY: z.coerce.number().default(5)
 });
 
 export const env = EnvSchema.parse(process.env);

@@ -7,6 +7,9 @@ import { z } from "zod";
 import { AgentService } from "../services/agent.service.js";
 import { checkUsage, incrementUsage } from "../lib/usage-tracker.js";
 
+import { env } from '../config/env.js';
+import { PlaywrightWorker } from '../workers/playwright.worker.js';
+
 const Body=z.object({ githubUsername:z.string().min(1).optional(), linkedinText:z.string().optional(), manualTargetTitles:z.array(z.string()).optional(), manualLocations:z.array(z.string()).optional(), provider:z.enum(["minimax","openai","anthropic","gemini","openrouter"]).optional(), topK:z.number().int().min(1).max(25).optional() });
 
 export async function jobRoutes(app: FastifyInstance) {
@@ -122,6 +125,31 @@ export async function jobRoutes(app: FastifyInstance) {
       return rep.send(draft);
     } catch (e: any) {
       console.error("[Jobs:Outreach]", e.message);
+      return rep.status(500).send({ error: "INTERNAL_SERVER_ERROR", message: e.message });
+    }
+  });
+
+  const ApplyBody = z.object({
+    jobUrl: z.string().url(),
+    userId: z.string().min(1),
+    profile: z.record(z.string(), z.any())
+  });
+
+  app.post('/jobs/apply', async (req, rep) => {
+    try {
+      if (env.AUTO_APPLY_ENABLED !== "true") {
+        return rep.status(403).send({
+          error: "AUTO_APPLY_DISABLED",
+          message: "Auto-apply is not enabled. Set AUTO_APPLY_ENABLED=true"
+        });
+      }
+
+      const body = ApplyBody.parse(req.body);
+      const worker = new PlaywrightWorker();
+      const result = await worker.apply(body.jobUrl, body.profile, body.userId);
+      return rep.send(result);
+    } catch (e: any) {
+      console.error("[Jobs:Apply]", e.message);
       return rep.status(500).send({ error: "INTERNAL_SERVER_ERROR", message: e.message });
     }
   });
