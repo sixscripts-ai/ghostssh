@@ -29,6 +29,52 @@ const SIGNAL_PATTERNS: Array<{ regex: RegExp; label: string; weight: number }> =
 ];
 
 export class HiringSignalService {
+  async score(company: string, role: string): Promise<{ urgencyScore: number, signals: string[] }> {
+    try {
+      const results = await webSearchService.search(`${company} hiring ${role} 2026`, 3);
+      let urgencyScore = 0;
+      const signals: Set<string> = new Set();
+      
+      let companyMentions = 0;
+
+      for (const result of results) {
+        const text = `${result.title} ${result.snippet}`.toLowerCase();
+        
+        if (text.includes("posted") && /(hour|day)s? ago/i.test(text)) {
+          urgencyScore += 25;
+          signals.add("recently_posted");
+        }
+        
+        if (text.includes("we're hiring") || text.includes("we are hiring") || text.includes("join our team")) {
+          urgencyScore += 20;
+          signals.add("active_hiring");
+        }
+        
+        if (text.includes("series") && text.includes("million")) {
+          urgencyScore += 15;
+          signals.add("recently_funded");
+        }
+        
+        // Track multiple openings
+        if (text.includes(company.toLowerCase())) {
+          companyMentions++;
+        }
+      }
+
+      if (companyMentions > 1) {
+        urgencyScore += 15;
+        signals.add("multiple_openings");
+      }
+
+      return {
+        urgencyScore: Math.min(urgencyScore, 100),
+        signals: Array.from(signals)
+      };
+    } catch (err) {
+      return { urgencyScore: 0, signals: [] };
+    }
+  }
+
   /**
    * Detect hiring intent for a company + role combination.
    * Returns a 0-100 score based on web evidence.

@@ -6,6 +6,7 @@ import { withFallback } from "../providers/index.js";
 import { jobRankPrompt } from "../prompts/job-rank.js";
 import { safeParseJson } from "../lib/safe-parse-json.js";
 import { emitAgentEvent } from "../lib/event-bus.js";
+import { hiringSignalService } from "./hiring-signal.service.js";
 
 const BATCH_SIZE = 25;
 
@@ -47,11 +48,31 @@ export class RankingService {
       );
 
       // Merge all results and re-sort by score
-      const merged = batchResults.flat().sort((a, b) => b.score - a.score);
-      console.log(`[Ranking] Merged ${merged.length} ranked jobs. Top: ${merged[0]?.title ?? 'none'} (${merged[0]?.score ?? 0})`);
+            const merged = batchResults.flat().sort((a, b) => b.score - a.score);
 
-      await emitAgentEvent({ userId: "system", agent: "ranker", action: "rank_jobs", status: "success", duration_ms: Date.now() - start, result_count: merged.length });
-      return merged;
+      const enhanced = await Promise.allSettled(
+        merged.slice(0, 20).map(async (job) => {
+          const signal = await hiringSignalService.score(job.company, job.title)
+            .catch(() => ({ urgencyScore: 0, signals: [] }));
+          return {
+            ...job,
+            score: Math.round((job.score * 0.6) + (signal.urgencyScore * 0.4)),
+            tags: [...job.tags, ...signal.signals]
+          };
+        })
+      );
+
+      const boosted = enhanced
+        .filter(r => r.status === 'fulfilled')
+        .map(r => (r as PromiseFulfilledResult<any>).value);
+      
+      const rest = merged.slice(20);
+      const finalRanked = [...boosted, ...rest].sort((a, b) => b.score - a.score);
+
+      console.log(`[Ranking] Merged ${finalRanked.length} ranked jobs. Top: ${finalRanked[0]?.title ?? 'none'} (${finalRanked[0]?.score ?? 0})`);
+      await emitAgentEvent({ userId: "system", agent: "ranker", action: "rank_jobs", status: "success", duration_ms: Date.now() - start, result_count: finalRanked.length });
+
+      return finalRanked;
     } catch(e: any) {
       await emitAgentEvent({ userId: "system", agent: "ranker", action: "rank_jobs", status: "error", duration_ms: Date.now() - start, error_message: e.message });
       throw e;
