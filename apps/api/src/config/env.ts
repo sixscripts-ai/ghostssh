@@ -19,6 +19,14 @@ const EnvSchema = z.object({
   FALLBACK_PROVIDER: z.enum(["minimax","openai","anthropic","gemini","openrouter"]).default("anthropic"),
   GITHUB_TOKEN: z.string().optional(),
   USER_AGENT: z.string().default("ghostssh/1.0"),
+
+  // Mem0 Cloud Memory
+  MEM0_API_KEY: z.string().optional(),
+
+  // Appwrite
+  APPWRITE_ENDPOINT: z.string().default("https://cloud.appwrite.io/v1"),
+  APPWRITE_PROJECT_ID: z.string().optional(),
+  APPWRITE_API_KEY: z.string().optional(),
 });
 
 export const env = EnvSchema.parse(process.env);

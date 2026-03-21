@@ -10,6 +10,10 @@ import { buildAgentRulesForModel } from "./prompts/model.rules.js";
 /**
  * Orchestrator: The autonomous Agentic Loop.
  * Instead of hardcoding steps, the Agent invokes these Tools when it needs to.
+ * Memory is integrated at every decision point:
+ *   - BEFORE ranking: retrieve semantic preferences & past applications
+ *   - AFTER ranking: persist ranking results to memory
+ *   - AFTER auto-apply: persist application events
  */
 export class AutonomousAgentOrchestrator {
   private profiles = new ProfileBuilderService();
@@ -34,12 +38,13 @@ export class AutonomousAgentOrchestrator {
     },
     {
       name: "query_memory_tool",
-      description: "Ask the memory service if we have applied to a similar job or company before.",
+      description: "Ask the memory service if we have applied to a similar job or company before, or retrieve user preferences.",
       input_schema: {
         type: "object",
         properties: {
-          companyName: { type: "string" }
-        }
+          query: { type: "string", description: "Semantic query to search agent memory" }
+        },
+        required: ["query"]
       }
     },
     {
@@ -84,7 +89,7 @@ export class AutonomousAgentOrchestrator {
     const modelRules = buildAgentRulesForModel(this.defaultProvider, history.semanticPreferences);
     console.log(`\n[AgentOrchestrator] Applying System Prompt Rules:\n${modelRules}\n`);
     
-    // 2. Short-term Memory: Record the current intent
+    // 2. Short-term Memory: Record the current intent to Mem0
     await this.memory.recordSearchQuery(githubUsername, userIntent);
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -126,7 +131,15 @@ export class AutonomousAgentOrchestrator {
                     toolResultContent = `Found ${newJobs.length} total jobs. Filtered down to ${unseenJobs.length} unseen jobs. Here is a brief preview of the first 5: ${JSON.stringify(unseenJobs.slice(0, 5))}. Note their IDs if you wish to rank them.`;
                 } 
                 else if (toolUse.name === "query_memory_tool") {
-                    toolResultContent = `Memory context limits: User has historically applied to ${history.appliedJobUrls.length} total jobs.`;
+                    // Use Mem0 semantic search instead of just counting applied jobs
+                    const args = toolUse.input as { query: string };
+                    const memories = await this.memory.searchMemory(githubUsername, args.query);
+                    
+                    if (memories.length > 0) {
+                      toolResultContent = `Found ${memories.length} relevant memories:\n${memories.map(m => `- ${m.memory}`).join('\n')}`;
+                    } else {
+                      toolResultContent = `No matching memories found. User has ${history.appliedJobUrls.length} previously applied/tracked jobs in the system.`;
+                    }
                 }
                 else if (toolUse.name === "rank_jobs_tool") {
                     // Extract IDs the LLM decided to rank from session state
@@ -134,11 +147,33 @@ export class AutonomousAgentOrchestrator {
                     const jobsToRank = this.sessionJobs.filter(j => args.jobIds.includes(j.id));
                     
                     const ranked = await this.ranking.rank(profile, jobsToRank.length > 0 ? jobsToRank : this.sessionJobs.slice(0, 5), this.defaultProvider);
-                    toolResultContent = `Ranked ${ranked.length} jobs successfully. Top match: ${ranked[0]?.title} at ${ranked[0]?.company} (Score: ${ranked[0]?.score}). Rationale: ${ranked[0]?.rationale}`;
+                    
+                    // Persist ranking result to Mem0
+                    const topMatch = ranked[0];
+                    if (topMatch) {
+                      await this.memory.recordRankingResult(
+                        githubUsername,
+                        topMatch.title,
+                        topMatch.company,
+                        topMatch.score,
+                        ranked.length
+                      );
+                    }
+                    
+                    toolResultContent = `Ranked ${ranked.length} jobs successfully. Top match: ${topMatch?.title ?? 'N/A'} at ${topMatch?.company ?? 'N/A'} (Score: ${topMatch?.score ?? 0}). Rationale: ${topMatch?.rationale ?? 'N/A'}`;
                 }
                 else if (toolUse.name === "queue_for_auto_apply_tool") {
                     const args = toolUse.input as { jobUrl: string, coverLetterRationale: string };
                     await this.queueJobForApplication(args.jobUrl, args.coverLetterRationale);
+                    
+                    // Persist application event to Mem0
+                    await this.memory.recordApplication(
+                      githubUsername,
+                      'Unknown Company',
+                      'Applied Role',
+                      args.jobUrl
+                    );
+                    
                     toolResultContent = `Successfully queued ${args.jobUrl} for auto-apply worker.`;
                 }
                 else {
