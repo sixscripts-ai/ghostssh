@@ -1,58 +1,48 @@
-name: Agent CI
-
-# Continuous integration for the AI job agent.
-#
-# This workflow installs dependencies, runs type checks, linting,
-# executes unit tests, and builds the production artifacts. It is
-# triggered on pushes, pull requests against the default branch,
-# scheduled intervals and via manual dispatch.  Secrets for API
-# providers are not required for this job because it does not call
-# external services directly. You can extend this file to include
-# deployment steps or additional quality checks.
+name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: ["**"]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   schedule:
-    # Run the pipeline every six hours to catch stale tests or
-    # security updates. Adjust the cron expression as needed.
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: "0 */6 * * *"
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
-    # Set a default working directory for all run commands.  Because this
-    # repository is structured as a monorepo with workspaces, we rely on
-    # npm workspaces to install and test packages across the tree.
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    defaults:
+      run:
+        working-directory: apps/api
 
-      - name: Use Node.js 18
-        uses: actions/setup-node@v4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
 
       - name: Install dependencies
-        # Use npm ci to install dependencies according to the lockfile.
-        run: npm ci --workspaces --if-present
+        run: npm install
 
-      - name: Type checking
-        # The typecheck script should exit non‑zero on error.  If
-        # typechecking is not critical for your project, you can remove
-        # `|| true` to make failures block the build.
-        run: npm run typecheck --workspaces --if-present || true
+      - name: Type check
+        run: npm run typecheck
 
       - name: Lint
-        run: npm run lint --workspaces --if-present
+        run: npm run lint
 
       - name: Test
-        run: npm run test --workspaces --if-present
+        run: npm run test
+        env:
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          DEFAULT_PROVIDER: minimax
 
       - name: Build
-        run: npm run build --workspaces --if-present
+        run: npm run build
