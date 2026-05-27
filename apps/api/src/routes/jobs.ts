@@ -29,9 +29,17 @@ export async function jobRoutes(app: FastifyInstance) {
     
     r.topK = Math.min(r.topK ?? 10, usage.maxJobs);
     
-    const result = await agent.search(r);
-    incrementUsage(userId); // fire and forget, no await
-    rep.send(result);
+    try {
+      const result = await agent.search(r);
+      incrementUsage(userId); // fire and forget, no await
+      rep.send(result);
+    } catch (e: any) {
+      console.error("[Jobs:Search]", e.message);
+      if (e.message.includes("429") || e.message.includes("Rate limit")) {
+        return rep.status(429).send({ error: "RATE_LIMITED", message: e.message });
+      }
+      return rep.status(500).send({ error: "INTERNAL_SERVER_ERROR", message: e.message });
+    }
   });
 
   const KitBody = z.object({

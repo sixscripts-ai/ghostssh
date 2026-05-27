@@ -25,8 +25,8 @@ export async function withFallback<T>(op: (p: LlmProvider) => Promise<T>, prefer
   catch (e: any) {
     console.error(`[withFallback] Provider ${primaryName} failed:`, e.message);
     if (primaryName === env.FALLBACK_PROVIDER) {
-      console.warn(`[withFallback] Primary matches fallback (${env.FALLBACK_PROVIDER}). Skipping fallback.`);
-      throw e;
+      console.warn(`[withFallback] Primary matches fallback (${env.FALLBACK_PROVIDER}). Attempting secondary fallback to minimax.`);
+      return await op(getProvider("minimax"));
     }
     return await op(getProvider(env.FALLBACK_PROVIDER));
   }

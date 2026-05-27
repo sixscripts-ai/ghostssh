@@ -46,8 +46,8 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
   };
 
   return (
-    <form className="search-form glass-card" onSubmit={handleSubmit}>
-      <h2>🔍 Job Search Agent</h2>
+    <form className="search-form glass-card hover-scale" onSubmit={handleSubmit}>
+      <h2 className="gradient-text">🔍 Job Search Agent</h2>
 
       <div className="form-grid">
         <div className="form-group">
@@ -158,7 +158,7 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
 
         <button
           type="submit"
-          className="search-btn"
+          className="search-btn btn btn-primary animated-glow-border hover:glow"
           disabled={isLoading || (!githubUsername && !linkedinText)}
         >
           {isLoading ? (

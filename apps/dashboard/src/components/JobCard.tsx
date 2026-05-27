@@ -6,12 +6,13 @@ interface JobCardProps {
   job: RankedJob;
   onClick: () => void;
   index: number;
+  isSelected?: boolean;
 }
 
-export default function JobCard({ job, onClick, index }: JobCardProps) {
+export default function JobCard({ job, onClick, index, isSelected }: JobCardProps) {
   return (
     <div
-      className="job-card glass-card card-animate"
+      className={`job-card glass card-animate hover-scale ${isSelected ? "selected" : ""}`}
       style={{ animationDelay: `${index * 60}ms` }}
       onClick={onClick}
       role="button"

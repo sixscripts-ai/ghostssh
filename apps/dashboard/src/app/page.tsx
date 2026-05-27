@@ -81,7 +81,8 @@ export default function HomePage() {
 
   return (
     <>
-      <div style={{ marginTop: "var(--space-xl)" }}>
+      <div className="pipeline-line"></div>
+      <div style={{ marginTop: "var(--space-xl)", position: "relative", zIndex: 1 }}>
         <SearchForm onSubmit={handleSearch} isLoading={isLoading} />
       </div>
 

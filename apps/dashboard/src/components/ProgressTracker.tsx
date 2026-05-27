@@ -73,7 +73,7 @@ export default function ProgressTracker() {
                 fontSize: "12px",
                 color: (isDone || isActive) ? "#000" : "var(--text-secondary)",
                 fontWeight: "bold",
-                boxShadow: isActive ? "0 0 10px rgba(0, 229, 255, 0.5)" : "none"
+                boxShadow: isActive ? "0 0 10px rgba(0, 255, 157, 0.5)" : "none"
               }}>
                 {isDone ? "✓" : (i + 1)}
               </div>
