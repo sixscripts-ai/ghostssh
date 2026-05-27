@@ -12,6 +12,7 @@ const PROVIDERS: { value: ProviderName; label: string }[] = [
   { value: "openrouter", label: "OpenRouter" },
   { value: "tetrate", label: "Tetrate Qwen3" },
   { value: "deepinfra", label: "DeepInfra Qwen3" },
+  { value: "groq", label: "Groq Llama 3.3" },
 ];
 
 interface SearchFormProps {
