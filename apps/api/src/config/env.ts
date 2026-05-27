@@ -18,10 +18,10 @@ const EnvSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default("gemini-2.5-pro"),
   OPENROUTER_API_KEY: z.string().optional(),
-  OPENROUTER_MODEL: z.string().default("openai/gpt-4o"),
+  OPENROUTER_MODEL: z.string().default("nvidia/nemotron-3-super-120b-a12b:free"),
 
-  DEFAULT_PROVIDER: z.enum(["minimax","openai","anthropic","gemini","openrouter"]).default("minimax"),
-  FALLBACK_PROVIDER: z.enum(["minimax","openai","anthropic","gemini","openrouter"]).default("anthropic"),
+  DEFAULT_PROVIDER: z.enum(["minimax","openai","anthropic","gemini","openrouter"]).default("openrouter"),
+  FALLBACK_PROVIDER: z.enum(["minimax","openai","anthropic","gemini","openrouter"]).default("openrouter"),
 
   GITHUB_TOKEN: z.string().optional(),
   USER_AGENT: z.string().default("ghostssh/1.0"),
