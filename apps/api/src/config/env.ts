@@ -18,7 +18,7 @@ const EnvSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default("gemini-2.5-pro"),
   OPENROUTER_API_KEY: z.string().optional(),
-  OPENROUTER_MODEL: z.string().default("nvidia/nemotron-3-super-120b-a12b:free"),
+  OPENROUTER_MODEL: z.string().default("google/gemma-4-31b-it:free"),
 
   DEFAULT_PROVIDER: z.enum(["minimax","openai","anthropic","gemini","openrouter"]).default("openrouter"),
   FALLBACK_PROVIDER: z.enum(["minimax","openai","anthropic","gemini","openrouter"]).default("minimax"),
