@@ -6,13 +6,14 @@ export class MinimaxProvider extends BaseProvider {
   readonly name = "minimax" as const;
 
   async _generate(params: LlmGenerateParams): Promise<string> {
-    if (!env.MINIMAX_API_KEY) throw new Error("MINIMAX_API_KEY missing");
+    const key = params.apiKey || env.MINIMAX_API_KEY;
+    if (!key) throw new Error("MINIMAX_API_KEY missing");
 
     const res = await fetch("https://api.minimaxi.chat/v1/text/chatcompletion_v2", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${env.MINIMAX_API_KEY}`,
+        "Authorization": `Bearer ${key}`,
       },
       body: JSON.stringify({
         model: env.MINIMAX_MODEL,

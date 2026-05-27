@@ -5,9 +5,10 @@ import { env } from "../config/env.js";
 export class OpenAIProvider extends BaseProvider {
   readonly name = "openai" as const;
   async _generate(params: LlmGenerateParams): Promise<string> {
-    if (!env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
+    const key = params.apiKey || env.OPENAI_API_KEY;
+    if (!key) throw new Error("OPENAI_API_KEY missing");
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${env.OPENAI_API_KEY}`},
+      method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${key}`},
       body: JSON.stringify({ model:env.OPENAI_MODEL, temperature:params.temperature??0.2, max_tokens:params.maxOutputTokens??2000, response_format:params.json?{type:"json_object"}:undefined, messages:[{role:"system",content:params.system},{role:"user",content:params.user}] })
     });
     if (!res.ok) throw new Error(`OpenAI error: ${await res.text()}`);

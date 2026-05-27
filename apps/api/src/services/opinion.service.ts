@@ -24,7 +24,7 @@ export class OpinionService {
   /**
    * Acts as an intelligent agent reviewing the top 20 ranked jobs to provide 3 distinct picks.
    */
-  async generate(profile: CandidateProfile, rankedJobs: RankedJob[], provider?: ProviderName): Promise<OpinionPick[]> {
+  async generate(profile: CandidateProfile, rankedJobs: RankedJob[], provider?: ProviderName, apiKey?: string): Promise<OpinionPick[]> {
     if (rankedJobs.length === 0) return [];
     
     // Only send the top 20 jobs to save tokens, as picks should come from the best matches
@@ -61,7 +61,8 @@ Do not return more than 3 picks. Make sure the type matches exactly.`;
         system,
         json: true,
         maxOutputTokens: 1000,
-        user
+        user,
+        apiKey
       }), provider);
 
       const parsed = Schema.parse(safeParseJson(raw));

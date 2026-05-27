@@ -7,7 +7,7 @@ import { JobAggregatorService } from "./jobs/aggregator.service.js";
 import { ProfileBuilderService, type BuildProfileInput } from "./profile-builder.service.js";
 import { RankingService } from "./ranking.service.js";
 
-export type AgentSearchInput = BuildProfileInput & { topK?:number };
+export type AgentSearchInput = BuildProfileInput & { topK?:number, apiKey?: string };
 export type AgentSearchResult = { profile:CandidateProfile; jobs:RankedJob[]; kits:ApplicationKit[]; opinions: import("../types/job.js").OpinionPick[]; providerUsed?:ProviderName };
 
 import { ID } from 'node-appwrite';
@@ -19,12 +19,12 @@ export class AgentService {
   async search(input:AgentSearchInput): Promise<AgentSearchResult> {
     const profile=await this.profiles.build(input);
     const jobs=await this.jobs.fetchAll();
-    const ranked=await this.ranking.rank(profile,jobs,input.provider);
+    const ranked=await this.ranking.rank(profile,jobs,input.provider,input.apiKey);
     const top=ranked.slice(0,input.topK??10);
     const kits: ApplicationKit[] = []; // Kits are now generated lazily via POST /jobs/kit
     // Generate intelligent opinions from the top results
     const { opinionService } = await import("./opinion.service.js");
-    const opinions = await opinionService.generate(profile, ranked, input.provider);
+    const opinions = await opinionService.generate(profile, ranked, input.provider, input.apiKey);
     
     // Save to Appwrite Database
     console.log(`Saving ${top.length} jobs to Appwrite...`);

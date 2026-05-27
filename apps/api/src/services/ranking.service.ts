@@ -28,7 +28,7 @@ export class RankingService {
    * Batches jobs in groups of 25 to avoid token bombs.
    * Runs batches in parallel, merges results, re-sorts by score.
    */
-  async rank(profile: CandidateProfile, jobs: JobPosting[], provider?: ProviderName): Promise<RankedJob[]> {
+  async rank(profile: CandidateProfile, jobs: JobPosting[], provider?: ProviderName, apiKey?: string): Promise<RankedJob[]> {
     const start = Date.now();
     try {
       const prefSummary = await agentMemoryService.getPreferenceSummary(
@@ -50,7 +50,7 @@ export class RankingService {
       // Rank each batch sequentially for rate limit compliance (free tier)
       const batchResults: import("../types/job.js").RankedJob[][] = [];
       for (let i = 0; i < batches.length; i++) {
-        const result = await this.rankBatch(profile, batches[i]!, provider, i + 1, batches.length, prefSummary);
+        const result = await this.rankBatch(profile, batches[i]!, provider, i + 1, batches.length, prefSummary, apiKey);
         batchResults.push(result);
       }
 
@@ -112,7 +112,8 @@ export class RankingService {
     provider: ProviderName | undefined,
     batchNum: number,
     totalBatches: number,
-    prefSummary: string = ""
+    prefSummary: string = "",
+    apiKey?: string
   ): Promise<RankedJob[]> {
     try {
       console.log(`[Ranking] Batch ${batchNum}/${totalBatches}: ${batch.length} jobs`);
@@ -136,6 +137,7 @@ export class RankingService {
             description: j.description.slice(0, 3000),
           })),
         }, null, 2),
+        apiKey,
       }), provider);
 
       const parsed = Schema.parse(safeParseJson(raw));

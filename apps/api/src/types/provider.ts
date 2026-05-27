@@ -5,6 +5,7 @@ export type LlmGenerateParams = {
   user: string;
   temperature?: number;
   maxOutputTokens?: number;
+  apiKey?: string;
   json?: boolean;
 };
 

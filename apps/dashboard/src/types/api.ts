@@ -66,6 +66,7 @@ export type SearchRequest = {
   manualTargetTitles?: string[];
   manualLocations?: string[];
   provider?: ProviderName;
+  apiKey?: string;
   topK?: number;
 };
 

@@ -23,6 +23,7 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
   const [titles, setTitles] = useState("AI Engineer, ML Engineer");
   const [locations, setLocations] = useState("Remote");
   const [provider, setProvider] = useState<ProviderName>("minimax");
+  const [apiKey, setApiKey] = useState("");
   const [topK, setTopK] = useState(10);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -39,6 +40,7 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
         .map((l) => l.trim())
         .filter(Boolean),
       provider,
+      apiKey: apiKey || undefined,
       topK,
     });
   };
@@ -108,6 +110,19 @@ export default function SearchForm({ onSubmit, isLoading }: SearchFormProps) {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="apiKey">
+                Custom API Key (Optional)
+              </label>
+              <input
+                id="apiKey"
+                className="form-input"
+                type="password"
+                placeholder="BYOK to bypass limits"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
             </div>
             <div className="form-group">
               <label className="form-label" htmlFor="topk">

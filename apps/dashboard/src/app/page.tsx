@@ -66,7 +66,8 @@ export default function HomePage() {
         body: JSON.stringify({
           job,
           profile: result.profile,
-          provider: lastRequest?.provider
+          provider: lastRequest?.provider,
+          apiKey: lastRequest?.apiKey
         })
       });
       if (res.ok) {
