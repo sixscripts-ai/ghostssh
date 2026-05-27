@@ -9,6 +9,8 @@ export const metadata: Metadata = {
     "AI-powered job hunting agent that reads your GitHub & LinkedIn profile, fetches live AI/ML job listings, and generates personalized cover letters.",
 };
 
+import { ToastProvider } from "@/components/Toast";
+
 export default function RootLayout({
   children,
 }: {
@@ -31,7 +33,11 @@ export default function RootLayout({
             </div>
           </div>
         </nav>
-        <main className="container">{children}</main>
+        <main className="container">
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </main>
       </body>
     </html>
   );

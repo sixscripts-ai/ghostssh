@@ -6,19 +6,28 @@ import { GeminiProvider } from "./gemini.provider.js";
 import { OpenAIProvider } from "./openai.provider.js";
 import { OpenRouterProvider } from "./openrouter.provider.js";
 
-const providers: Record<ProviderName, LlmProvider> = {
-  minimax: new MinimaxProvider(),
-  openai: new OpenAIProvider(),
-  anthropic: new AnthropicProvider(),
-  gemini: new GeminiProvider(),
-  openrouter: new OpenRouterProvider(),
+const providers: Record<ProviderName, () => LlmProvider> = {
+  minimax: () => new MinimaxProvider(),
+  openai: () => new OpenAIProvider(),
+  anthropic: () => new AnthropicProvider(),
+  gemini: () => new GeminiProvider(),
+  openrouter: () => new OpenRouterProvider(),
 };
 
 export function getProvider(name?: ProviderName): LlmProvider {
-  return providers[name ?? env.DEFAULT_PROVIDER];
+  const providerFn = providers[name ?? env.DEFAULT_PROVIDER];
+  return providerFn();
 }
 
 export async function withFallback<T>(op: (p: LlmProvider) => Promise<T>, preferred?: ProviderName): Promise<T> {
-  try { return await op(getProvider(preferred)); }
-  catch { return await op(getProvider(env.FALLBACK_PROVIDER)); }
+  const primaryName = preferred || env.DEFAULT_PROVIDER;
+  try { return await op(getProvider(primaryName)); }
+  catch (e: any) {
+    console.error(`[withFallback] Provider ${primaryName} failed:`, e.message);
+    if (primaryName === env.FALLBACK_PROVIDER) {
+      console.warn(`[withFallback] Primary matches fallback (${env.FALLBACK_PROVIDER}). Skipping fallback.`);
+      throw e;
+    }
+    return await op(getProvider(env.FALLBACK_PROVIDER));
+  }
 }

@@ -170,7 +170,6 @@ export default function KanbanBoard() {
                   draggable
                   onDragStart={(e) => handleDragStart(e, job.$id)}
                   onDragEnd={(e) => handleDragEnd(e, job.$id)}
-                  onClick={() => window.open(job.url, "_blank")}
                 >
                   <div className="kanban-item-header">
                     <span className="kanban-item-company">{job.company}</span>
@@ -178,11 +177,17 @@ export default function KanbanBoard() {
                       ↗
                     </a>
                   </div>
-                  <div className="kanban-item-title">{job.title}</div>
+                  <div 
+                    className="kanban-item-title" 
+                    onClick={() => window.open(job.url, "_blank")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {job.title}
+                  </div>
                   
-                  <div className="kanban-item-meta">
-                    <span className="kanban-item-location">{job.location || 'Remote'}</span>
-                    <span className={`kanban-item-score ${getScoreColor(job.matchScore)}`}>
+                  <div className="kanban-item-meta" style={{ marginTop: "var(--space-sm)" }}>
+                    <span className="kanban-item-location">📍 {job.location || 'Remote'}</span>
+                    <span style={{ fontSize: "0.75rem", color: getScoreColor(job.matchScore) === "high" ? "#10b981" : "var(--text-secondary)" }}>
                       {job.matchScore}% Match
                     </span>
                   </div>

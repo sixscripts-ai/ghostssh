@@ -41,7 +41,7 @@ export async function checkUsage(userId: string): Promise<UsageStatus> {
     return { allowed, tier, runsToday, maxJobs: limits.maxJobs };
   } catch (err) {
     // Fail open if Appwrite fails
-    return { allowed: true, tier: "free", runsToday: 0, maxJobs: 10 };
+    return { allowed: true, tier: "free", runsToday: 0, maxJobs: 5 };
   }
 }
 

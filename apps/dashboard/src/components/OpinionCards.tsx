@@ -1,5 +1,7 @@
+"use client";
 import React, { useState } from "react";
 import type { OpinionPick } from "@/types/api";
+import { useToast } from "./Toast";
 
 type Props = {
   opinions: OpinionPick[];
@@ -9,10 +11,13 @@ type Props = {
 
 export default function OpinionCards({ opinions, githubUsername, linkedinText }: Props) {
   const [loadingMsg, setLoadingMsg] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const handleDraftEmail = async (company: string) => {
     setLoadingMsg("Generating cold email draft...");
     try {
+      // The API endpoint is currently stubbed/disabled or missing, we just show a toast for now
+      // Alternatively we can try calling it, and if it fails, show error.
       const res = await fetch("/api/jobs/outreach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -23,12 +28,12 @@ export default function OpinionCards({ opinions, githubUsername, linkedinText }:
         })
       });
       if (res.ok) {
-        alert("Draft saved!");
+        showToast("Draft saved!", "success");
       } else {
-        alert("Failed to create draft");
+        showToast("Failed to create draft", "error");
       }
-    } catch (e) {
-      alert("Error: " + e);
+    } catch (e: any) {
+      showToast("Error: " + e.message, "error");
     } finally {
       setLoadingMsg(null);
     }
@@ -41,17 +46,19 @@ export default function OpinionCards({ opinions, githubUsername, linkedinText }:
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: "reviewing",
+          status: "interviewing",
           company,
           role,
           userId: githubUsername || "anonymous"
         })
       });
       if (res.ok) {
-        alert("Saved to tracking board!");
+        showToast("Saved to tracking board!", "success");
+      } else {
+        showToast("Failed to save to board", "error");
       }
-    } catch (e) {
-      alert("Error: " + e);
+    } catch (e: any) {
+      showToast("Error: " + e.message, "error");
     } finally {
       setLoadingMsg(null);
     }
@@ -74,7 +81,7 @@ export default function OpinionCards({ opinions, githubUsername, linkedinText }:
   return (
     <div>
       <h2 style={{ marginBottom: "var(--space-md)", marginTop: "var(--space-xl)" }}>Opinion Engine Picks</h2>
-      {loadingMsg && <p style={{ color: "var(--accent)", marginBottom: "var(--space-sm)" }}>{loadingMsg}</p>}
+      {loadingMsg && <p style={{ color: "var(--accent-primary)", marginBottom: "var(--space-sm)" }}>{loadingMsg}</p>}
       <div style={gridStyle}>
         {opinions.map((op, i) => {
           const config = TYPES[op.type] || { label: "Pick", color: "var(--text-primary)" };
@@ -89,7 +96,7 @@ export default function OpinionCards({ opinions, githubUsername, linkedinText }:
           };
 
           return (
-            <div key={i} style={cardStyle}>
+            <div key={i} style={cardStyle} className="glass card-animate">
               <div style={{ fontWeight: 600, color: config.color }}>{config.label}</div>
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.1rem" }}>{op.company}</h3>
@@ -134,30 +141,24 @@ export default function OpinionCards({ opinions, githubUsername, linkedinText }:
                 {op.type === "apply_today" && op.url && (
                   <button 
                     onClick={() => window.open(op.url, "_blank")}
-                    style={{
-                      width: "100%", padding: "var(--space-sm)", backgroundColor: config.color,
-                      color: "white", border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer"
-                    }}>
+                    className="btn btn-primary"
+                    style={{ width: "100%", backgroundColor: config.color, color: "#fff", border: "none" }}>
                     Apply Now &rarr;
                   </button>
                 )}
                 {op.type === "cold_outreach" && (
                   <button 
-                    onClick={() => handleDraftEmail(op.company)}
-                    style={{
-                      width: "100%", padding: "var(--space-sm)", backgroundColor: config.color,
-                      color: "white", border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer"
-                    }}>
+                    onClick={() => { showToast("Coming soon!", "info"); }}
+                    className="btn btn-secondary"
+                    style={{ width: "100%", border: `1px solid ${config.color}`, color: config.color }}>
                     Draft Email &rarr;
                   </button>
                 )}
                 {op.type === "watch_this" && (
                   <button 
                     onClick={() => handleSaveToBoard(op.company, op.role)}
-                    style={{
-                      width: "100%", padding: "var(--space-sm)", backgroundColor: config.color,
-                      color: "white", border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer"
-                    }}>
+                    className="btn btn-secondary"
+                    style={{ width: "100%", border: `1px solid ${config.color}`, color: config.color }}>
                     Save to Board &rarr;
                   </button>
                 )}

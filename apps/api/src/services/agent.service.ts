@@ -21,8 +21,7 @@ export class AgentService {
     const jobs=await this.jobs.fetchAll();
     const ranked=await this.ranking.rank(profile,jobs,input.provider);
     const top=ranked.slice(0,input.topK??10);
-    const kits=await Promise.all(top.slice(0,5).map(j=>this.kits.create(profile,j,input.provider)));
-    
+    const kits: ApplicationKit[] = []; // Kits are now generated lazily via POST /jobs/kit
     // Generate intelligent opinions from the top results
     const { opinionService } = await import("./opinion.service.js");
     const opinions = await opinionService.generate(profile, ranked, input.provider);
@@ -35,6 +34,7 @@ export class AgentService {
         company: String(job.company).slice(0, 255),
         url: String(job.url).slice(0, 1000),
         status: 'saved',
+        profileId: (profile as any).$id || input.githubUsername || 'anonymous',
         matchScore: typeof job.score === 'number' ? (job.score <= 1 ? Math.round(job.score * 100) : Math.round(job.score)) : 0,
         location: String(job.location || '').slice(0, 255),
         rationale: JSON.stringify({

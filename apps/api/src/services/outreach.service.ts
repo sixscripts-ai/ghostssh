@@ -4,6 +4,7 @@ import { withFallback } from '../providers/index.js'
 import { databases, DATABASE_ID } from '../lib/appwrite.js'
 import { ID } from 'node-appwrite'
 import { emitAgentEvent } from '../lib/event-bus.js'
+import { safeParseJson } from '../lib/safe-parse-json.js'
 
 export type Contact = {
   name: string
@@ -88,8 +89,7 @@ export class OutreachService {
     })) as string
     
     // Safety generic parsing for JSON returned within backticks
-    const cleaned = rawResponse.replace(/```json/g, '').replace(/```/g, '').trim()
-    const parsed = JSON.parse(cleaned)
+    const parsed = safeParseJson(rawResponse) as any;
 
     const followUp = new Date()
     followUp.setDate(followUp.getDate() + 7)

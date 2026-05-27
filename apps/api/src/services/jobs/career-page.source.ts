@@ -2,6 +2,7 @@ import type { JobPosting } from '../../types/job.js';
 import { webSearchService } from '../web-search.service.js';
 import { jinaScraperService } from '../jina-scraper.service.js';
 import { withFallback } from '../../providers/index.js';
+import { safeParseJson } from '../../lib/safe-parse-json.js';
 
 /**
  * Discovers jobs from company career pages via web search + Jina scraping.
@@ -83,7 +84,7 @@ Return ONLY a JSON array, no explanation.`;
       json: true,
     }));
 
-    const parsed = JSON.parse(raw);
+    const parsed = safeParseJson(raw) as any;
     const items = Array.isArray(parsed) ? parsed : (parsed.jobs || parsed.listings || []);
 
     return items

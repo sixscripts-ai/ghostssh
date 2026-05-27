@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { SearchRequest, SearchResponse, RankedJob } from "@/types/api";
+import type { SearchRequest, SearchResponse, RankedJob, ApplicationKit } from "@/types/api";
 import SearchForm from "@/components/SearchForm";
 import JobCard from "@/components/JobCard";
 import JobDetail from "@/components/JobDetail";
 import ProfileSummary from "@/components/ProfileSummary";
 import OpinionCards from "@/components/OpinionCards";
 import ActivityFeed from "@/components/ActivityFeed";
-import LoadingState from "@/components/LoadingState";
+import ProgressTracker from "@/components/ProgressTracker";
 import ErrorState from "@/components/ErrorState";
 
 export default function HomePage() {
@@ -16,6 +16,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<RankedJob | null>(null);
+  const [selectedKit, setSelectedKit] = useState<ApplicationKit | undefined>(undefined);
   const [lastRequest, setLastRequest] = useState<SearchRequest | null>(null);
 
   const handleSearch = useCallback(async (data: SearchRequest) => {
@@ -23,6 +24,7 @@ export default function HomePage() {
     setError(null);
     setResult(null);
     setSelectedJob(null);
+    setSelectedKit(undefined);
     setLastRequest(data);
 
     try {
@@ -52,14 +54,29 @@ export default function HomePage() {
     if (lastRequest) handleSearch(lastRequest);
   }, [lastRequest, handleSearch]);
 
-  // Find the kit for the selected job
-  const selectedKit =
-    selectedJob && result
-      ? result.kits.find(
-          (k) =>
-            k.company === selectedJob.company && k.title === selectedJob.title
-        )
-      : undefined;
+  const handleJobSelect = useCallback(async (job: RankedJob) => {
+    setSelectedJob(job);
+    setSelectedKit(undefined); // clear old kit
+    if (!result?.profile) return;
+    
+    try {
+      const res = await fetch("/api/jobs/kit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job,
+          profile: result.profile,
+          provider: lastRequest?.provider
+        })
+      });
+      if (res.ok) {
+        const kit = await res.json();
+        setSelectedKit(kit);
+      }
+    } catch (e) {
+      console.error("Failed to lazy load kit:", e);
+    }
+  }, [result, lastRequest]);
 
   return (
     <>
@@ -71,7 +88,7 @@ export default function HomePage() {
         <ActivityFeed githubUsername={lastRequest.githubUsername} />
       )}
 
-      {isLoading && <LoadingState />}
+      {isLoading && <ProgressTracker />}
 
       {error && <ErrorState message={error} onRetry={handleRetry} />}
 
@@ -105,7 +122,7 @@ export default function HomePage() {
                   key={job.id}
                   job={job}
                   index={i}
-                  onClick={() => setSelectedJob(job)}
+                  onClick={() => handleJobSelect(job)}
                 />
               ))}
             </div>

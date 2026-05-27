@@ -34,6 +34,25 @@ export async function jobRoutes(app: FastifyInstance) {
     rep.send(result);
   });
 
+  const KitBody = z.object({
+    job: z.any(),
+    profile: z.any(),
+    provider: z.enum(["minimax","openai","anthropic","gemini","openrouter"]).optional()
+  });
+
+  app.post("/jobs/kit", async (req, rep) => {
+    try {
+      const body = KitBody.parse(req.body);
+      const { ApplicationKitService } = await import("../services/application-kit.service.js");
+      const kitsService = new ApplicationKitService();
+      const kit = await kitsService.create(body.profile, body.job, body.provider);
+      return rep.send(kit);
+    } catch (e: any) {
+      console.error("[Jobs:Kit]", e.message);
+      return rep.status(500).send({ error: "INTERNAL_SERVER_ERROR", message: e.message });
+    }
+  });
+
   const KanbanBody = z.object({
     status: z.enum(["applied", "interviewing", "offer", "rejected", "not_interested"]),
     company: z.string().optional(),

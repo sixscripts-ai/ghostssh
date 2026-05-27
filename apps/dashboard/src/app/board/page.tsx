@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import KanbanBoard from "@/components/KanbanBoard";
+
+export const metadata: Metadata = {
+  title: "Application Pipeline — ghostssh",
+  description: "Manage your active job applications.",
+};
 
 export default function BoardPage() {
   return (

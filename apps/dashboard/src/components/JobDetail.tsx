@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import type { RankedJob, ApplicationKit } from "@/types/api";
 import ScoreBadge from "./ScoreBadge";
 import SkillTag from "./SkillTag";
@@ -12,6 +13,13 @@ interface JobDetailProps {
 }
 
 export default function JobDetail({ job, kit, onClose }: JobDetailProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
   return (
     <>
       <div className="detail-overlay" onClick={onClose} />
@@ -66,20 +74,23 @@ export default function JobDetail({ job, kit, onClose }: JobDetailProps) {
             </div>
           )}
 
-          <div className="detail-actions">
+          <div className="detail-actions" style={{ display: 'flex', gap: 'var(--space-md)', marginTop: 'var(--space-xl)' }}>
             <a
               href={job.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-primary"
+              className="btn btn-primary"
             >
-              Apply →
+              Open Posting ↗
             </a>
             <button
-              className="btn-secondary"
-              onClick={() => window.open(job.url, "_blank")}
+              className="btn btn-secondary"
+              onClick={() => {
+                navigator.clipboard.writeText(job.url);
+                // Can use toast if we import useToast, but for now just copy
+              }}
             >
-              View Posting
+              Copy Link
             </button>
           </div>
 
