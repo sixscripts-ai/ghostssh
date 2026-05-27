@@ -6,6 +6,8 @@ import { GeminiProvider } from "./gemini.provider.js";
 import { OpenAIProvider } from "./openai.provider.js";
 import { OpenRouterProvider } from "./openrouter.provider.js";
 import { TetrateProvider } from "./tetrate.provider.js";
+import { DeepInfraProvider } from "./deepinfra.provider.js";
+import { GroqProvider } from "./groq.provider.js";
 
 const providers: Record<ProviderName, () => LlmProvider> = {
   minimax: () => new MinimaxProvider(),
@@ -14,6 +16,8 @@ const providers: Record<ProviderName, () => LlmProvider> = {
   gemini: () => new GeminiProvider(),
   openrouter: () => new OpenRouterProvider(),
   tetrate: () => new TetrateProvider(),
+  deepinfra: () => new DeepInfraProvider(),
+  groq: () => new GroqProvider(),
 };
 
 export function getProvider(name?: ProviderName): LlmProvider {

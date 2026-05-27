@@ -10,7 +10,7 @@ import { checkUsage, incrementUsage } from "../lib/usage-tracker.js";
 import { env } from '../config/env.js';
 import { PlaywrightWorker } from '../workers/playwright.worker.js';
 
-const Body=z.object({ githubUsername:z.string().min(1).optional(), linkedinText:z.string().optional(), manualTargetTitles:z.array(z.string()).optional(), manualLocations:z.array(z.string()).optional(), provider:z.enum(["minimax","openai","anthropic","gemini","openrouter"]).optional(), apiKey:z.string().optional(), topK:z.number().int().min(1).max(25).optional() });
+const Body=z.object({ githubUsername:z.string().min(1).optional(), linkedinText:z.string().optional(), manualTargetTitles:z.array(z.string()).optional(), manualLocations:z.array(z.string()).optional(), provider:z.enum(["minimax","openai","anthropic","gemini","openrouter","tetrate","deepinfra","groq"]).optional(), apiKey:z.string().optional(), topK:z.number().int().min(1).max(25).optional() });
 
 export async function jobRoutes(app: FastifyInstance) {
   const agent=new AgentService();
@@ -45,7 +45,7 @@ export async function jobRoutes(app: FastifyInstance) {
   const KitBody = z.object({
     job: z.any(),
     profile: z.any(),
-    provider: z.enum(["minimax","openai","anthropic","gemini","openrouter"]).optional(),
+    provider: z.enum(["minimax","openai","anthropic","gemini","openrouter","tetrate","deepinfra","groq"]).optional(),
     apiKey: z.string().optional()
   });
 

@@ -58,7 +58,15 @@ export type CandidateProfile = {
   highlights: string[];
 };
 
-export type ProviderName = "minimax" | "openai" | "anthropic" | "gemini" | "openrouter";
+export type ProviderName =
+  | 'minimax'
+  | 'openai'
+  | 'anthropic'
+  | 'gemini'
+  | 'openrouter'
+  | 'tetrate'
+  | 'deepinfra'
+  | 'groq';
 
 export type SearchRequest = {
   githubUsername?: string;
