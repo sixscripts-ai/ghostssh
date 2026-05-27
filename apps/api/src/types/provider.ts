@@ -1,4 +1,4 @@
-export type ProviderName = "minimax" | "openai" | "anthropic" | "gemini" | "openrouter";
+export type ProviderName = "minimax" | "openai" | "anthropic" | "gemini" | "openrouter" | "tetrate";
 
 export type LlmGenerateParams = {
   system: string;

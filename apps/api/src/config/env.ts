@@ -19,9 +19,11 @@ const EnvSchema = z.object({
   GEMINI_MODEL: z.string().default("gemini-2.5-pro"),
   OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_MODEL: z.string().default("google/gemma-4-31b-it:free"),
+  TETRATE_API_KEY: z.string().optional(),
+  TETRATE_MODEL: z.string().default("Qwen/Qwen3-Next-80B-A3B-Instruct"),
 
-  DEFAULT_PROVIDER: z.enum(["minimax","openai","anthropic","gemini","openrouter"]).default("openrouter"),
-  FALLBACK_PROVIDER: z.enum(["minimax","openai","anthropic","gemini","openrouter"]).default("minimax"),
+  DEFAULT_PROVIDER: z.enum(["minimax","openai","anthropic","gemini","openrouter","tetrate"]).default("tetrate"),
+  FALLBACK_PROVIDER: z.enum(["minimax","openai","anthropic","gemini","openrouter","tetrate"]).default("minimax"),
 
   GITHUB_TOKEN: z.string().optional(),
   USER_AGENT: z.string().default("ghostssh/1.0"),

@@ -5,6 +5,7 @@ import { AnthropicProvider } from "./anthropic.provider.js";
 import { GeminiProvider } from "./gemini.provider.js";
 import { OpenAIProvider } from "./openai.provider.js";
 import { OpenRouterProvider } from "./openrouter.provider.js";
+import { TetrateProvider } from "./tetrate.provider.js";
 
 const providers: Record<ProviderName, () => LlmProvider> = {
   minimax: () => new MinimaxProvider(),
@@ -12,6 +13,7 @@ const providers: Record<ProviderName, () => LlmProvider> = {
   anthropic: () => new AnthropicProvider(),
   gemini: () => new GeminiProvider(),
   openrouter: () => new OpenRouterProvider(),
+  tetrate: () => new TetrateProvider(),
 };
 
 export function getProvider(name?: ProviderName): LlmProvider {
